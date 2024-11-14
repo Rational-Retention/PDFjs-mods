@@ -101,7 +101,7 @@
 
 /*#if GENERIC*/
 .pdfViewer.removePageBorders .page {
-  margin: 10px auto 10px;
+  margin: 10px auto;
   border: none;
 }
 /*#endif*/

@@ -497,7 +497,7 @@ class PDFViewer {
     if (!this.pdfDocument) {
       return;
     }
-    this.#setScale(val, { noScroll: val === "page-fit" });
+    this.#setScale(val, { noScroll: true });
   }
 
   /**
