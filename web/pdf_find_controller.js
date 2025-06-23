@@ -594,6 +594,7 @@ class PDFFindController {
   }
 
   #reset() {
+    this._hasExactMatch = false;
     this._highlightMatches = false;
     this._scrollMatches = false;
     this._pdfDocument = null;
@@ -911,7 +912,16 @@ class PDFFindController {
       this._pageMatches[pageIndex]?.length > 0 ||
       this.pageHighlights[pageIndex]?.length > 0;
 
-    if (!hasMatches && fuzzySearchEnabled && query.length > 1) {
+    if (hasMatches) {
+      this._hasExactMatch = true;
+    }
+
+    if (
+      this._hasExactMatch &&
+      !hasMatches &&
+      fuzzySearchEnabled &&
+      query.length > 1
+    ) {
       this._pdfDocument
         .getPage(pageIndex + 1)
         .then(pdfPage => pdfPage.getTextContent({ disableNormalization: true }))
