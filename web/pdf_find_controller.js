@@ -415,6 +415,8 @@ class PDFFindController {
 
   #visitedPagesCount = 0;
 
+  #fuzzyMatchFound = false;
+
   /**
    * @param {PDFFindControllerOptions} options
    */
@@ -911,7 +913,12 @@ class PDFFindController {
       this._pageMatches[pageIndex]?.length > 0 ||
       this.pageHighlights[pageIndex]?.length > 0;
 
-    if (!hasMatches && fuzzySearchEnabled && query.length > 1) {
+    if (
+      !this.#fuzzyMatchFound &&
+      !hasMatches &&
+      fuzzySearchEnabled &&
+      query.length > 1
+    ) {
       this._pdfDocument
         .getPage(pageIndex + 1)
         .then(pdfPage => pdfPage.getTextContent({ disableNormalization: true }))
@@ -974,6 +981,8 @@ class PDFFindController {
           if (!bestSubstring) {
             return;
           }
+
+          this.#fuzzyMatchFound = true;
 
           const [normalizedSubstring] = normalize(bestSubstring);
           const [normalizedPageContent] = normalize(pageContent);
@@ -1171,6 +1180,14 @@ class PDFFindController {
       source: this,
       pageIndex: index,
     });
+
+    const { fuzzySearchEnabled } = this.#state;
+    if (fuzzySearchEnabled && index === this._linkService.pagesCount - 1) {
+      this._eventBus.dispatch("fuzzysearching", {
+        source: this,
+        isSearching: false,
+      });
+    }
   }
 
   #updateAllPages() {
