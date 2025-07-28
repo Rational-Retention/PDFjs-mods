@@ -415,7 +415,7 @@ class PDFFindController {
 
   #visitedPagesCount = 0;
 
-  #matchFound = false;
+  #fuzzyMatchFound = false;
 
   /**
    * @param {PDFFindControllerOptions} options
@@ -914,7 +914,7 @@ class PDFFindController {
       this.pageHighlights[pageIndex]?.length > 0;
 
     if (
-      !this.#matchFound &&
+      !this.#fuzzyMatchFound &&
       !hasMatches &&
       fuzzySearchEnabled &&
       query.length > 1
@@ -982,7 +982,7 @@ class PDFFindController {
             return;
           }
 
-          this.#matchFound = true;
+          this.#fuzzyMatchFound = true;
 
           const [normalizedSubstring] = normalize(bestSubstring);
           const [normalizedPageContent] = normalize(pageContent);
