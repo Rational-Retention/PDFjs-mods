@@ -874,6 +874,7 @@ class PDFFindController {
 
   #calculateMatch(pageIndex) {
     const query = this.#query;
+    console.log("Query: ", query, "\n");
     const termHighlighting = this.termHighlighting;
     if (query.length === 0 && Object.keys(termHighlighting).length === 0) {
       return; // Do nothing: the matches should be wiped out already.
@@ -944,6 +945,7 @@ class PDFFindController {
           });
 
           const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
+          console.log("Cleaned query: ", cleanedQuery, "\n");
 
           const windowSize = 5;
           const step = 1;
@@ -967,6 +969,8 @@ class PDFFindController {
             minMatchCharLength: 3,
           });
 
+          console.log("Sliding chunks:", slidingChunks, "\n");
+
           const fuzzyMatches = fuse.search(cleanedQuery);
           const bestMatch = fuzzyMatches[0];
           if (!bestMatch) {
@@ -981,6 +985,8 @@ class PDFFindController {
           if (!bestSubstring) {
             return;
           }
+
+          console.log("Best substring: ", bestSubstring, "\n");
 
           this.#fuzzyMatchFound = true;
 
@@ -1045,6 +1051,9 @@ class PDFFindController {
     if (!text || !query) {
       return null;
     }
+    console.log("Finding best substring match between:");
+    console.log("Text:", text);
+    console.log("Query:", query, "\n");
 
     const textWords = text.split(/\s+/);
 
@@ -1057,11 +1066,24 @@ class PDFFindController {
       for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
         const phrase = textWords.slice(i, j).join(" ");
         const [normalizedPhrase] = normalize(phrase);
+        console.log("Phrase:", phrase);
 
         const score =
           normalizedQuery.length < 300
             ? this.#similarityScore(normalizedPhrase, normalizedQuery)
             : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
+
+        // Remove these later!!
+        const similarityScore = this.#similarityScore(
+          normalizedPhrase,
+          normalizedQuery
+        );
+        const tokenSetSimilarity = this.#tokenSetSimilarity(
+          normalizedPhrase,
+          normalizedQuery
+        );
+        console.log(" Levenshtein score:", similarityScore);
+        console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
 
         if (score > highestScore) {
           highestScore = score;
