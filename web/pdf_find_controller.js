@@ -874,7 +874,6 @@ class PDFFindController {
 
   #calculateMatch(pageIndex) {
     const query = this.#query;
-    console.log("Query: ", query, "\n");
     const termHighlighting = this.termHighlighting;
     if (query.length === 0 && Object.keys(termHighlighting).length === 0) {
       return; // Do nothing: the matches should be wiped out already.
@@ -978,10 +977,20 @@ class PDFFindController {
           }
 
           const bestWindowText = bestMatch.item.text;
+          console.time("Original");
           const bestSubstring = this.#findBestSubstringMatch(
             bestWindowText,
             cleanedQuery
           );
+          console.timeEnd("Original");
+          console.log("Best Substring:", bestSubstring);
+          console.time("New");
+          const goodSubstring = this.#findGoodSubstringMatch(
+            bestWindowText,
+            cleanedQuery
+          );
+          console.timeEnd("New");
+          console.log("Good Substring:", goodSubstring);
           if (!bestSubstring) {
             return;
           }
@@ -1051,9 +1060,9 @@ class PDFFindController {
     if (!text || !query) {
       return null;
     }
-    console.log("Finding best substring match between:");
-    console.log("Text:", text);
-    console.log("Query:", query, "\n");
+    // console.log("Finding best substring match between:");
+    // console.log("Text:", text);
+    // console.log("Query:", query, "\n");
 
     const textWords = text.split(/\s+/);
 
@@ -1066,7 +1075,7 @@ class PDFFindController {
       for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
         const phrase = textWords.slice(i, j).join(" ");
         const [normalizedPhrase] = normalize(phrase);
-        console.log("Phrase:", phrase);
+        // console.log("Phrase:", phrase);
 
         const score =
           normalizedQuery.length < 300
@@ -1074,16 +1083,48 @@ class PDFFindController {
             : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
         // Remove these later!!
-        const similarityScore = this.#similarityScore(
-          normalizedPhrase,
-          normalizedQuery
-        );
-        const tokenSetSimilarity = this.#tokenSetSimilarity(
-          normalizedPhrase,
-          normalizedQuery
-        );
-        console.log(" Levenshtein score:", similarityScore);
-        console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
+        // const similarityScore = this.#similarityScore(
+        //   normalizedPhrase,
+        //   normalizedQuery
+        // );
+        // const tokenSetSimilarity = this.#tokenSetSimilarity(
+        //   normalizedPhrase,
+        //   normalizedQuery
+        // );
+        // console.log(" Levenshtein score:", similarityScore);
+        // console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
+
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = phrase;
+        }
+      }
+    }
+
+    return highestScore > 0.3 ? bestMatch : null;
+  }
+
+  #findGoodSubstringMatch(text, query) {
+    if (!text || !query) {
+      return null;
+    }
+
+    const textWords = text.split(/\s+/);
+
+    let bestMatch = null;
+    let highestScore = 0;
+
+    const [normalizedQuery] = normalize(query);
+
+    for (let i = 0; i < textWords.length; i += 2) {
+      for (let j = i + 3; j <= textWords.length && j - i <= 40; j += 2) {
+        const phrase = textWords.slice(i, j).join(" ");
+        const [normalizedPhrase] = normalize(phrase);
+
+        const score =
+          normalizedQuery.length < 300
+            ? this.#similarityScore(normalizedPhrase, normalizedQuery)
+            : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
         if (score > highestScore) {
           highestScore = score;
