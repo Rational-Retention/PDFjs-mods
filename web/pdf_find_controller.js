@@ -982,30 +982,28 @@ class PDFFindController {
           console.timeEnd("tss");
           console.log(tssMatches.length, "tss matches found");
 
-          console.log("fuse match:", fuzzyMatches[0].item.text);
-          console.log(" tss match:", tssMatches[0].item.text);
-          const bestMatch = fuzzyMatches[0];
+          const bestMatch = tssMatches[0];
           if (!bestMatch) {
             return;
           }
 
           const bestWindowText = bestMatch.item.text;
-          console.log("bestWindowText:", bestWindowText);
+
           // console.time("Original");
-          const bestSubstring = this.#findBestSubstringMatch(
-            bestWindowText,
-            cleanedQuery
-          );
+          // const bestSubstring = this.#findBestSubstringMatch(
+          //   bestWindowText,
+          //   cleanedQuery
+          // );
           // console.timeEnd("Original");
-          console.log("Best Substring:", bestSubstring);
+          // console.log("Best Substring:", bestSubstring);
           // console.time("New");
-          const goodSubstring = this.#findGoodSubstringMatch(
+          const bestSubstring = this.#findGoodSubstringMatch(
             bestWindowText,
             cleanedQuery,
             2
           );
           // console.timeEnd("New");
-          console.log("Good Substring:", goodSubstring);
+          // console.log("Good Substring:", goodSubstring);
           if (!bestSubstring) {
             return;
           }
@@ -1069,49 +1067,49 @@ class PDFFindController {
     }
   }
 
-  #findBestSubstringMatch(text, query) {
-    if (!text || !query) {
-      return null;
-    }
-
-    const textWords = text.split(/\s+/);
-
-    let bestMatch = null;
-    let highestScore = 0;
-
-    const [normalizedQuery] = normalize(query);
-
-    for (let i = 0; i < textWords.length; i++) {
-      for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
-        const phrase = textWords.slice(i, j).join(" ");
-        const [normalizedPhrase] = normalize(phrase);
-
-        const score =
-          normalizedQuery.length < 300
-            ? this.#similarityScore(normalizedPhrase, normalizedQuery)
-            : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
-
-        // // Remove these later!!
-        // const similarityScore = this.#similarityScore(
-        //   normalizedPhrase,
-        //   normalizedQuery
-        // );
-        // const tokenSetSimilarity = this.#tokenSetSimilarity(
-        //   normalizedPhrase,
-        //   normalizedQuery
-        // );
-        // console.log(" Levenshtein score:", similarityScore);
-        // console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
-
-        if (score > highestScore) {
-          highestScore = score;
-          bestMatch = phrase;
-        }
-      }
-    }
-
-    return highestScore > 0.3 ? bestMatch : null;
-  }
+  // #findBestSubstringMatch(text, query) {
+  //   if (!text || !query) {
+  //     return null;
+  //   }
+  //
+  //   const textWords = text.split(/\s+/);
+  //
+  //   let bestMatch = null;
+  //   let highestScore = 0;
+  //
+  //   const [normalizedQuery] = normalize(query);
+  //
+  //   for (let i = 0; i < textWords.length; i++) {
+  //     for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
+  //       const phrase = textWords.slice(i, j).join(" ");
+  //       const [normalizedPhrase] = normalize(phrase);
+  //
+  //       const score =
+  //         normalizedQuery.length < 300
+  //           ? this.#similarityScore(normalizedPhrase, normalizedQuery)
+  //           : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
+  //
+  //       // // Remove these later!!
+  //       // const similarityScore = this.#similarityScore(
+  //       //   normalizedPhrase,
+  //       //   normalizedQuery
+  //       // );
+  //       // const tokenSetSimilarity = this.#tokenSetSimilarity(
+  //       //   normalizedPhrase,
+  //       //   normalizedQuery
+  //       // );
+  //       // console.log(" Levenshtein score:", similarityScore);
+  //       // console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
+  //
+  //       if (score > highestScore) {
+  //         highestScore = score;
+  //         bestMatch = phrase;
+  //       }
+  //     }
+  //   }
+  //
+  //   return highestScore > 0.3 ? bestMatch : null;
+  // }
 
   #findGoodSubstringMatch(text, query, precision) {
     if (!text || !query) {
