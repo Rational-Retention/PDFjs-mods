@@ -913,125 +913,133 @@ class PDFFindController {
       this._pageMatches[pageIndex]?.length > 0 ||
       this.pageHighlights[pageIndex]?.length > 0;
 
-    if (
-      !this.#fuzzyMatchFound &&
-      !hasMatches &&
-      fuzzySearchEnabled &&
-      query.length > 1
-    ) {
-      this._pdfDocument
-        .getPage(pageIndex + 1)
-        .then(pdfPage => pdfPage.getTextContent({ disableNormalization: true }))
-        .then(textContent => {
-          const originalTextItems = textContent.items
-            .map(item => item.str)
-            .filter(originalTextItem => originalTextItem !== "");
-          const items = [];
+    for (let threshold = 0.9; threshold >= 0.3; threshold -= 0.2) {
+      if (
+        !this.#fuzzyMatchFound &&
+        !hasMatches &&
+        fuzzySearchEnabled &&
+        query.length > 1
+      ) {
+        this._pdfDocument
+          .getPage(pageIndex + 1)
+          .then(pdfPage =>
+            pdfPage.getTextContent({ disableNormalization: true })
+          )
+          .then(textContent => {
+            const originalTextItems = textContent.items
+              .map(item => item.str)
+              .filter(originalTextItem => originalTextItem !== "");
+            const items = [];
 
-          originalTextItems.forEach((item, index) => {
-            if (
-              item.length === 1 ||
-              originalTextItems[index - 1]?.length === 1
-            ) {
-              if (items.length > 0) {
-                items[items.length - 1] = `${items.at(-1)}${item}`;
+            originalTextItems.forEach((item, index) => {
+              if (
+                item.length === 1 ||
+                originalTextItems[index - 1]?.length === 1
+              ) {
+                if (items.length > 0) {
+                  items[items.length - 1] = `${items.at(-1)}${item}`;
+                } else {
+                  items.push(item);
+                }
               } else {
                 items.push(item);
               }
-            } else {
-              items.push(item);
-            }
-          });
-
-          console.log("items:" + items);
-
-          const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
-
-          const windowSize = 5;
-          const step = 1;
-          const slidingChunks = [];
-
-          for (let i = 0; i <= items.length - windowSize; i += step) {
-            const windowChunks = items.slice(i, i + windowSize);
-            slidingChunks.push({
-              text: windowChunks.join("\n"),
-              indices: [i, i + windowSize - 1],
-              items: windowChunks,
             });
-          }
 
-          const fuse = new Fuse(slidingChunks, {
-            keys: ["text"],
-            includeScore: true,
-            threshold: 0.3,
-            ignoreLocation: true,
-            distance: 100,
-            minMatchCharLength: 3,
+            console.log("items:", items);
+
+            const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
+
+            const windowSize = 5;
+            const step = 1;
+            const slidingChunks = [];
+
+            for (let i = 0; i <= items.length - windowSize; i += step) {
+              const windowChunks = items.slice(i, i + windowSize);
+              slidingChunks.push({
+                text: windowChunks.join("\n"),
+                indices: [i, i + windowSize - 1],
+                items: windowChunks,
+              });
+            }
+
+            const fuse = new Fuse(slidingChunks, {
+              keys: ["text"],
+              includeScore: true,
+              threshold,
+              ignoreLocation: true,
+              distance: 100,
+              minMatchCharLength: 3,
+              shouldSort: true,
+            });
+
+            const fuzzyMatches = fuse.search(cleanedQuery);
+            console.log(
+              fuzzyMatches.length,
+              "matches found at threshold:",
+              threshold
+            );
+
+            console.log("best match:", fuzzyMatches[0]);
+            const bestMatch = fuzzyMatches[0];
+            if (!bestMatch) {
+              return;
+            }
+
+            const bestWindowText = bestMatch.item.text;
+            console.log("bestWindowText:", bestWindowText);
+            // console.time("Original");
+            const bestSubstring = this.#findBestSubstringMatch(
+              bestWindowText,
+              cleanedQuery
+            );
+            // console.timeEnd("Original");
+            console.log("Best Substring:", bestSubstring);
+            // console.time("New");
+            const goodSubstring = this.#findGoodSubstringMatch(
+              bestWindowText,
+              cleanedQuery,
+              2
+            );
+            // console.timeEnd("New");
+            console.log("Good Substring:", goodSubstring);
+            if (!bestSubstring) {
+              return;
+            }
+
+            this.#fuzzyMatchFound = true;
+
+            const [normalizedSubstring] = normalize(bestSubstring);
+            const [normalizedPageContent] = normalize(pageContent);
+
+            const normalizedIndex =
+              normalizedPageContent.indexOf(normalizedSubstring);
+            if (normalizedIndex === -1) {
+              return;
+            }
+
+            const matchedText = [
+              pageContent.slice(
+                normalizedIndex,
+                normalizedIndex + bestSubstring.length
+              ),
+            ];
+
+            this.#calculateRegExpMatch(
+              matchedText.map(matchText => ({
+                query: this.#convertToRegExp(matchText, hasDiacritics),
+                color: "rgba(255, 165, 0, 0.3)",
+              })),
+              entireWord,
+              pageIndex,
+              pageContent
+            );
+
+            setTimeout(() => this.#updatePage(pageIndex), 50);
+            this._linkService.goToPage(pageIndex + 1);
           });
-
-          const fuzzyMatches = fuse.search(cleanedQuery);
-          console.log("fuzzyMatches:" + fuzzyMatches);
-          const bestMatch = fuzzyMatches[0];
-          if (!bestMatch) {
-            return;
-          }
-
-          const bestWindowText = bestMatch.item.text;
-          console.log("query length:", cleanedQuery.length);
-          console.time("Original");
-          const bestSubstring = this.#findBestSubstringMatch(
-            bestWindowText,
-            cleanedQuery
-          );
-          console.timeEnd("Original");
-          console.log("Best Substring:", bestSubstring);
-          console.time("New");
-          const goodSubstring = this.#findGoodSubstringMatch(
-            bestWindowText,
-            cleanedQuery,
-            2
-          );
-          console.timeEnd("New");
-          console.log(
-            "Good Substring:",
-            goodSubstring,
-            "(token set similarity)"
-          );
-          if (!bestSubstring) {
-            return;
-          }
-
-          this.#fuzzyMatchFound = true;
-
-          const [normalizedSubstring] = normalize(bestSubstring);
-          const [normalizedPageContent] = normalize(pageContent);
-
-          const normalizedIndex =
-            normalizedPageContent.indexOf(normalizedSubstring);
-          if (normalizedIndex === -1) {
-            return;
-          }
-
-          const matchedText = [
-            pageContent.slice(
-              normalizedIndex,
-              normalizedIndex + bestSubstring.length
-            ),
-          ];
-
-          this.#calculateRegExpMatch(
-            matchedText.map(matchText => ({
-              query: this.#convertToRegExp(matchText, hasDiacritics),
-              color: "rgba(255, 165, 0, 0.3)",
-            })),
-            entireWord,
-            pageIndex,
-            pageContent
-          );
-
-          setTimeout(() => this.#updatePage(pageIndex), 50);
-          this._linkService.goToPage(pageIndex + 1);
-        });
+      }
+      console.log("\n\n\n\n\n");
     }
 
     // When `highlightAll` is set, ensure that the matches on previously
@@ -1076,7 +1084,6 @@ class PDFFindController {
       for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
         const phrase = textWords.slice(i, j).join(" ");
         const [normalizedPhrase] = normalize(phrase);
-        // console.log("Phrase:", phrase);
 
         const score =
           normalizedQuery.length < 300
@@ -1084,16 +1091,16 @@ class PDFFindController {
             : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
         // Remove these later!!
-        // const similarityScore = this.#similarityScore(
-        //   normalizedPhrase,
-        //   normalizedQuery
-        // );
-        // const tokenSetSimilarity = this.#tokenSetSimilarity(
-        //   normalizedPhrase,
-        //   normalizedQuery
-        // );
-        // console.log(" Levenshtein score:", similarityScore);
-        // console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
+        const similarityScore = this.#similarityScore(
+          normalizedPhrase,
+          normalizedQuery
+        );
+        const tokenSetSimilarity = this.#tokenSetSimilarity(
+          normalizedPhrase,
+          normalizedQuery
+        );
+        console.log(" Levenshtein score:", similarityScore);
+        console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
 
         if (score > highestScore) {
           highestScore = score;
@@ -1126,14 +1133,10 @@ class PDFFindController {
         const phrase = textWords.slice(i, j).join(" ");
         const [normalizedPhrase] = normalize(phrase);
 
-        // const score =
-        //   normalizedQuery.length < 300
-        //     ? this.#similarityScore(normalizedPhrase, normalizedQuery)
-        //     : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
-        const score = this.#tokenSetSimilarity(
-          normalizedPhrase,
-          normalizedQuery
-        );
+        const score =
+          normalizedQuery.length < 300
+            ? this.#similarityScore(normalizedPhrase, normalizedQuery)
+            : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
         if (score > highestScore) {
           highestScore = score;
