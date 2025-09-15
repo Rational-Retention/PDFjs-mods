@@ -943,7 +943,7 @@ class PDFFindController {
             }
           });
 
-          console.log("items:", items);
+          // console.log("items:", items);
 
           const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
 
@@ -960,26 +960,26 @@ class PDFFindController {
             });
           }
 
-          console.time("fuse");
-          const fuse = new Fuse(slidingChunks, {
-            keys: ["text"],
-            includeScore: true,
-            threshold: 0.3,
-            ignoreLocation: true,
-            distance: 100,
-            minMatchCharLength: 3,
-            shouldSort: true,
-          });
-          const fuzzyMatches = fuse.search(cleanedQuery);
-          console.timeEnd("fuse");
-          console.log(fuzzyMatches.length, "fuse matches found");
+          // console.time("fuse");
+          // const fuse = new Fuse(slidingChunks, {
+          //   keys: ["text"],
+          //   includeScore: true,
+          //   threshold: 0.3,
+          //   ignoreLocation: true,
+          //   distance: 100,
+          //   minMatchCharLength: 3,
+          //   shouldSort: true,
+          // });
+          // const fuzzyMatches = fuse.search(cleanedQuery);
+          // console.timeEnd("fuse");
+          // console.log(fuzzyMatches.length, "fuse matches found");
 
-          console.time("tss");
+          // console.time("tss");
           const tssMatches = this.#findSubstringMatches(
             slidingChunks,
             cleanedQuery
           );
-          console.timeEnd("tss");
+          // console.timeEnd("tss");
           console.log(tssMatches.length, "tss matches found");
 
           const bestMatch = tssMatches[0];
@@ -1156,7 +1156,7 @@ class PDFFindController {
 
       const score = this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
-      if (score > 0.3) {
+      if (score > 0.25) {
         fuzzyMatches.push({
           item: slidingChunks[i],
           refIndex: i,
