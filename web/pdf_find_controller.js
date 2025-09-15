@@ -975,12 +975,15 @@ class PDFFindController {
           console.log(fuzzyMatches.length, "fuse matches found");
 
           console.time("tss");
-          const tssMatches = this.#findSubstringMatches(slidingChunks);
+          const tssMatches = this.#findSubstringMatches(
+            slidingChunks,
+            cleanedQuery
+          );
           console.timeEnd("tss");
           console.log(tssMatches.length, "tss matches found");
 
           console.log("fuse match:", fuzzyMatches[0].item.text);
-          console.log(" tss match:", tssMatches[0].text);
+          console.log(" tss match:", tssMatches[0].item.text);
           const bestMatch = fuzzyMatches[0];
           if (!bestMatch) {
             return;
@@ -1146,28 +1149,21 @@ class PDFFindController {
     return highestScore > 0.3 ? bestMatch : null;
   }
 
-  #findSubstringMatches(slidingChunks, query, precision) {
+  #findSubstringMatches(slidingChunks, query) {
     const fuzzyMatches = [];
     const [normalizedQuery] = normalize(query);
 
-    const textWords = slidingChunks.text.split(/\s+/);
+    for (let i = 0; i < slidingChunks.length; i++) {
+      const [normalizedPhrase] = normalize(slidingChunks[i].text);
 
-    for (let i = 0; i < textWords.length; i += precision) {
-      for (let j = i + 3; j < textWords.length && j - i <= 40; j += precision) {
-        const phrase = textWords.slice(i, j).join(" ");
-        const [normalizedPhrase] = normalize(phrase);
+      const score = this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
-        const score = this.#tokenSetSimilarity(
-          normalizedPhrase,
-          normalizedQuery
-        );
-
-        if (score > 0.3) {
-          fuzzyMatches.push({
-            text: phrase,
-            score,
-          });
-        }
+      if (score > 0.3) {
+        fuzzyMatches.push({
+          item: slidingChunks[i],
+          refIndex: i,
+          score,
+        });
       }
     }
     return fuzzyMatches.sort((a, b) => b.score - a.score);
