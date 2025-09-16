@@ -964,7 +964,7 @@ class PDFFindController {
             0.2
           );
           console.timeEnd("findSubstringMatches");
-          console.log(tssMatches.length, "tss matches found at threshold");
+          console.log(tssMatches.length, "tss matches found at threshold 0.2");
 
           const bestMatch = tssMatches[0];
           if (!bestMatch) {
@@ -1107,18 +1107,19 @@ class PDFFindController {
     let highestScore = 0;
 
     const [normalizedQuery] = normalize(query);
+    const queryLength = query.split(/\s+/).length;
 
     console.log(
       "Trying",
-      Math.floor((query.length * 2 - query.length * 0.5) / 3),
-      "substrings for query of length",
-      query.length
+      Math.floor((queryLength * 2 - queryLength * 0.5) / 3),
+      "substring lengths for query of length",
+      queryLength
     );
 
     for (let i = 0; i < textWords.length; i += coarseness) {
       for (
-        let j = Math.floor(i + query.length * 0.5);
-        j <= textWords.length && j - i <= query.length * 2;
+        let j = Math.floor(i + queryLength * 0.5);
+        j <= textWords.length && j - i <= queryLength * 2;
         j += coarseness
       ) {
         const phrase = textWords.slice(i, j).join(" ");
