@@ -19,7 +19,6 @@
 
 import { binarySearchFirstItem, scrollIntoView } from "./ui_utils.js";
 import { getCharacterType, getNormalizeWithNFKC } from "./pdf_find_utils.js";
-import Fuse from "fuse.js";
 import { promiseWithResolvers } from "../src/core/promise_with_resolvers.js";
 
 const FindState = {
@@ -913,132 +912,141 @@ class PDFFindController {
       this._pageMatches[pageIndex]?.length > 0 ||
       this.pageHighlights[pageIndex]?.length > 0;
 
-    if (
-      !this.#fuzzyMatchFound &&
-      !hasMatches &&
-      fuzzySearchEnabled &&
-      query.length > 1
-    ) {
-      this._pdfDocument
-        .getPage(pageIndex + 1)
-        .then(pdfPage => pdfPage.getTextContent({ disableNormalization: true }))
-        .then(textContent => {
-          const originalTextItems = textContent.items
-            .map(item => item.str)
-            .filter(originalTextItem => originalTextItem !== "");
-          const items = [];
+    for (let threshold = 0.3; threshold >= 0.2; threshold -= 0.1) {
+      if (
+        !this.#fuzzyMatchFound &&
+        !hasMatches &&
+        fuzzySearchEnabled &&
+        query.length > 1
+      ) {
+        this._pdfDocument
+          .getPage(pageIndex + 1)
+          .then(pdfPage =>
+            pdfPage.getTextContent({ disableNormalization: true })
+          )
+          .then(textContent => {
+            const originalTextItems = textContent.items
+              .map(item => item.str)
+              .filter(originalTextItem => originalTextItem !== "");
+            const items = [];
 
-          originalTextItems.forEach((item, index) => {
-            if (
-              item.length === 1 ||
-              originalTextItems[index - 1]?.length === 1
-            ) {
-              if (items.length > 0) {
-                items[items.length - 1] = `${items.at(-1)}${item}`;
+            originalTextItems.forEach((item, index) => {
+              if (
+                item.length === 1 ||
+                originalTextItems[index - 1]?.length === 1
+              ) {
+                if (items.length > 0) {
+                  items[items.length - 1] = `${items.at(-1)}${item}`;
+                } else {
+                  items.push(item);
+                }
               } else {
                 items.push(item);
               }
-            } else {
-              items.push(item);
-            }
-          });
-
-          // console.log("items:", items);
-
-          const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
-
-          const windowSize = 5;
-          const step = 1;
-          const slidingChunks = [];
-
-          for (let i = 0; i <= items.length - windowSize; i += step) {
-            const windowChunks = items.slice(i, i + windowSize);
-            slidingChunks.push({
-              text: windowChunks.join("\n"),
-              indices: [i, i + windowSize - 1],
-              items: windowChunks,
             });
-          }
 
-          // console.time("fuse");
-          // const fuse = new Fuse(slidingChunks, {
-          //   keys: ["text"],
-          //   includeScore: true,
-          //   threshold: 0.3,
-          //   ignoreLocation: true,
-          //   distance: 100,
-          //   minMatchCharLength: 3,
-          //   shouldSort: true,
-          // });
-          // const fuzzyMatches = fuse.search(cleanedQuery);
-          // console.timeEnd("fuse");
-          // console.log(fuzzyMatches.length, "fuse matches found");
+            // console.log("items:", items);
 
-          // console.time("tss");
-          const tssMatches = this.#findSubstringMatches(
-            slidingChunks,
-            cleanedQuery
-          );
-          // console.timeEnd("tss");
-          console.log(tssMatches.length, "tss matches found");
+            const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
 
-          const bestMatch = tssMatches[0];
-          if (!bestMatch) {
-            return;
-          }
+            const windowSize = 5;
+            const step = 1;
+            const slidingChunks = [];
 
-          const bestWindowText = bestMatch.item.text;
+            for (let i = 0; i <= items.length - windowSize; i += step) {
+              const windowChunks = items.slice(i, i + windowSize);
+              slidingChunks.push({
+                text: windowChunks.join("\n"),
+                indices: [i, i + windowSize - 1],
+                items: windowChunks,
+              });
+            }
 
-          // console.time("Original");
-          // const bestSubstring = this.#findBestSubstringMatch(
-          //   bestWindowText,
-          //   cleanedQuery
-          // );
-          // console.timeEnd("Original");
-          // console.log("Best Substring:", bestSubstring);
-          // console.time("New");
-          const bestSubstring = this.#findGoodSubstringMatch(
-            bestWindowText,
-            cleanedQuery,
-            2
-          );
-          // console.timeEnd("New");
-          // console.log("Good Substring:", goodSubstring);
-          if (!bestSubstring) {
-            return;
-          }
+            // console.time("fuse");
+            // const fuse = new Fuse(slidingChunks, {
+            //   keys: ["text"],
+            //   includeScore: true,
+            //   threshold: 0.3,
+            //   ignoreLocation: true,
+            //   distance: 100,
+            //   minMatchCharLength: 3,
+            //   shouldSort: true,
+            // });
+            // const fuzzyMatches = fuse.search(cleanedQuery);
+            // console.timeEnd("fuse");
+            // console.log(fuzzyMatches.length, "fuse matches found");
 
-          this.#fuzzyMatchFound = true;
+            console.time("findSubstringMatches");
+            const tssMatches = this.#findSubstringMatches(
+              slidingChunks,
+              cleanedQuery,
+              threshold
+            );
+            console.timeEnd("findSubstringMatches");
+            console.log(
+              tssMatches.length,
+              "tss matches found at threshold",
+              threshold
+            );
 
-          const [normalizedSubstring] = normalize(bestSubstring);
-          const [normalizedPageContent] = normalize(pageContent);
+            const bestMatch = tssMatches[0];
+            if (!bestMatch) {
+              return;
+            }
 
-          const normalizedIndex =
-            normalizedPageContent.indexOf(normalizedSubstring);
-          if (normalizedIndex === -1) {
-            return;
-          }
+            const bestWindowText = bestMatch.item.text;
 
-          const matchedText = [
-            pageContent.slice(
-              normalizedIndex,
-              normalizedIndex + bestSubstring.length
-            ),
-          ];
+            // console.time("Original");
+            // const bestSubstring = this.#findBestSubstringMatch(
+            //   bestWindowText,
+            //   cleanedQuery
+            // );
+            // console.timeEnd("Original");
+            // console.log("Best Substring:", bestSubstring);
+            // console.time("New");
+            const bestSubstring = this.#findGoodSubstringMatch(
+              bestWindowText,
+              cleanedQuery,
+              3
+            );
+            // console.timeEnd("New");
+            // console.log("Good Substring:", goodSubstring);
+            if (!bestSubstring) {
+              return;
+            }
 
-          this.#calculateRegExpMatch(
-            matchedText.map(matchText => ({
-              query: this.#convertToRegExp(matchText, hasDiacritics),
-              color: "rgba(255, 165, 0, 0.3)",
-            })),
-            entireWord,
-            pageIndex,
-            pageContent
-          );
+            this.#fuzzyMatchFound = true;
 
-          setTimeout(() => this.#updatePage(pageIndex), 50);
-          this._linkService.goToPage(pageIndex + 1);
-        });
+            const [normalizedSubstring] = normalize(bestSubstring);
+            const [normalizedPageContent] = normalize(pageContent);
+
+            const normalizedIndex =
+              normalizedPageContent.indexOf(normalizedSubstring);
+            if (normalizedIndex === -1) {
+              return;
+            }
+
+            const matchedText = [
+              pageContent.slice(
+                normalizedIndex,
+                normalizedIndex + bestSubstring.length
+              ),
+            ];
+
+            this.#calculateRegExpMatch(
+              matchedText.map(matchText => ({
+                query: this.#convertToRegExp(matchText, hasDiacritics),
+                color: "rgba(255, 165, 0, 0.3)",
+              })),
+              entireWord,
+              pageIndex,
+              pageContent
+            );
+
+            setTimeout(() => this.#updatePage(pageIndex), 50);
+            this._linkService.goToPage(pageIndex + 1);
+          });
+      }
     }
 
     // When `highlightAll` is set, ensure that the matches on previously
@@ -1112,6 +1120,7 @@ class PDFFindController {
   // }
 
   #findGoodSubstringMatch(text, query, precision) {
+    console.time("findGoodSubstringMatch");
     if (!text || !query) {
       return null;
     }
@@ -1143,11 +1152,11 @@ class PDFFindController {
         }
       }
     }
-
+    console.timeEnd("findGoodSubstringMatch");
     return highestScore > 0.3 ? bestMatch : null;
   }
 
-  #findSubstringMatches(slidingChunks, query) {
+  #findSubstringMatches(slidingChunks, query, threshold) {
     const fuzzyMatches = [];
     const [normalizedQuery] = normalize(query);
 
@@ -1156,7 +1165,7 @@ class PDFFindController {
 
       const score = this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
 
-      if (score > 0.25) {
+      if (score > threshold) {
         fuzzyMatches.push({
           item: slidingChunks[i],
           refIndex: i,
