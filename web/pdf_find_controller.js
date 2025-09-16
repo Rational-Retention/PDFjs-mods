@@ -912,7 +912,7 @@ class PDFFindController {
       this._pageMatches[pageIndex]?.length > 0 ||
       this.pageHighlights[pageIndex]?.length > 0;
 
-    for (let threshold = 0.3; threshold >= 0.2; threshold -= 0.1) {
+    for (let threshold = 0.3; threshold >= 0.2; threshold -= 0.05) {
       if (
         !this.#fuzzyMatchFound &&
         !hasMatches &&
@@ -1119,7 +1119,7 @@ class PDFFindController {
   //   return highestScore > 0.3 ? bestMatch : null;
   // }
 
-  #findGoodSubstringMatch(text, query, precision) {
+  #findGoodSubstringMatch(text, query, coarseness) {
     console.time("findGoodSubstringMatch");
     if (!text || !query) {
       return null;
@@ -1132,11 +1132,11 @@ class PDFFindController {
 
     const [normalizedQuery] = normalize(query);
 
-    for (let i = 0; i < textWords.length; i += precision) {
+    for (let i = 0; i < textWords.length; i += coarseness) {
       for (
         let j = i + 3;
         j <= textWords.length && j - i <= 40;
-        j += precision
+        j += coarseness
       ) {
         const phrase = textWords.slice(i, j).join(" ");
         const [normalizedPhrase] = normalize(phrase);
