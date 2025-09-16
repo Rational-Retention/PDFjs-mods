@@ -957,14 +957,11 @@ class PDFFindController {
             });
           }
 
-          console.time("findSubstringMatches");
           const tssMatches = this.#findSubstringMatches(
             slidingChunks,
             cleanedQuery,
             0.2
           );
-          console.timeEnd("findSubstringMatches");
-          console.log(tssMatches.length, "tss matches found at threshold 0.2");
 
           const bestMatch = tssMatches[0];
           if (!bestMatch) {
@@ -972,22 +969,10 @@ class PDFFindController {
           }
 
           const bestWindowText = bestMatch.item.text;
-
-          // console.time("Original");
-          // const bestSubstring = this.#findBestSubstringMatch(
-          //   bestWindowText,
-          //   cleanedQuery
-          // );
-          // console.timeEnd("Original");
-          // console.log("Best Substring:", bestSubstring);
-          // console.time("New");
           const bestSubstring = this.#findGoodSubstringMatch(
             bestWindowText,
-            cleanedQuery,
-            3
+            cleanedQuery
           );
-          // console.timeEnd("New");
-          // console.log("Good Substring:", goodSubstring);
           if (!bestSubstring) {
             return;
           }
@@ -1051,52 +1036,27 @@ class PDFFindController {
     }
   }
 
-  // #findBestSubstringMatch(text, query) {
-  //   if (!text || !query) {
-  //     return null;
-  //   }
-  //
-  //   const textWords = text.split(/\s+/);
-  //
-  //   let bestMatch = null;
-  //   let highestScore = 0;
-  //
-  //   const [normalizedQuery] = normalize(query);
-  //
-  //   for (let i = 0; i < textWords.length; i++) {
-  //     for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
-  //       const phrase = textWords.slice(i, j).join(" ");
-  //       const [normalizedPhrase] = normalize(phrase);
-  //
-  //       const score =
-  //         normalizedQuery.length < 300
-  //           ? this.#similarityScore(normalizedPhrase, normalizedQuery)
-  //           : this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
-  //
-  //       // // Remove these later!!
-  //       // const similarityScore = this.#similarityScore(
-  //       //   normalizedPhrase,
-  //       //   normalizedQuery
-  //       // );
-  //       // const tokenSetSimilarity = this.#tokenSetSimilarity(
-  //       //   normalizedPhrase,
-  //       //   normalizedQuery
-  //       // );
-  //       // console.log(" Levenshtein score:", similarityScore);
-  //       // console.log("Jaccard similarity:", tokenSetSimilarity, "\n");
-  //
-  //       if (score > highestScore) {
-  //         highestScore = score;
-  //         bestMatch = phrase;
-  //       }
-  //     }
-  //   }
-  //
-  //   return highestScore > 0.3 ? bestMatch : null;
-  // }
+  #findSubstringMatches(slidingChunks, query, threshold) {
+    const fuzzyMatches = [];
+    const [normalizedQuery] = normalize(query);
 
-  #findGoodSubstringMatch(text, query, coarseness) {
-    console.time("findGoodSubstringMatch");
+    for (let i = 0; i < slidingChunks.length; i++) {
+      const [normalizedPhrase] = normalize(slidingChunks[i].text);
+
+      const score = this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
+
+      if (score > threshold) {
+        fuzzyMatches.push({
+          item: slidingChunks[i],
+          refIndex: i,
+          score,
+        });
+      }
+    }
+    return fuzzyMatches.sort((a, b) => b.score - a.score);
+  }
+
+  #findGoodSubstringMatch(text, query) {
     if (!text || !query) {
       return null;
     }
@@ -1108,13 +1068,7 @@ class PDFFindController {
 
     const [normalizedQuery] = normalize(query);
     const queryLength = query.split(/\s+/).length;
-
-    console.log(
-      "Trying",
-      Math.floor((queryLength * 2 - queryLength * 0.5) / 3),
-      "substring lengths for query of length",
-      queryLength
-    );
+    const coarseness = queryLength / 10 < 1 ? 1 : Math.floor(queryLength / 10);
 
     for (let i = 0; i < textWords.length; i += coarseness) {
       for (
@@ -1136,28 +1090,7 @@ class PDFFindController {
         }
       }
     }
-    console.timeEnd("findGoodSubstringMatch");
     return highestScore > 0.3 ? bestMatch : null;
-  }
-
-  #findSubstringMatches(slidingChunks, query, threshold) {
-    const fuzzyMatches = [];
-    const [normalizedQuery] = normalize(query);
-
-    for (let i = 0; i < slidingChunks.length; i++) {
-      const [normalizedPhrase] = normalize(slidingChunks[i].text);
-
-      const score = this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
-
-      if (score > threshold) {
-        fuzzyMatches.push({
-          item: slidingChunks[i],
-          refIndex: i,
-          score,
-        });
-      }
-    }
-    return fuzzyMatches.sort((a, b) => b.score - a.score);
   }
 
   #similarityScore(a, b) {
