@@ -957,13 +957,13 @@ class PDFFindController {
             });
           }
 
-          const tssMatches = this.#findSubstringMatches(
+          const fuzzyMatches = this.#findSubstringMatches(
             slidingChunks,
             cleanedQuery,
             0.2
           );
 
-          const bestMatch = tssMatches[0];
+          const bestMatch = fuzzyMatches[0];
           if (!bestMatch) {
             return;
           }
@@ -1072,8 +1072,8 @@ class PDFFindController {
 
     for (let i = 0; i < textWords.length; i += coarseness) {
       for (
-        let j = Math.floor(i + queryLength * 0.5);
-        j <= textWords.length && j - i <= queryLength * 2;
+        let j = Math.floor(i + queryLength * 0.75);
+        j <= textWords.length && j - i <= Math.ceil(queryLength * 1.5);
         j += coarseness
       ) {
         const phrase = textWords.slice(i, j).join(" ");
