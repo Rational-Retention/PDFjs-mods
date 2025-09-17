@@ -968,7 +968,7 @@ class PDFFindController {
           }
 
           const bestWindowText = bestMatch.item.text;
-          const bestSubstring = this.#findBestSubstringMatch(
+          const bestSubstring = this.#findGoodSubstringMatch(
             bestWindowText,
             cleanedQuery
           );
@@ -1095,7 +1095,7 @@ class PDFFindController {
     return fuzzyMatches.sort((a, b) => b.score - a.score);
   }
 
-  #findBestSubstringMatch(text, query) {
+  #findGoodSubstringMatch(text, query) {
     if (!text || !query) {
       return null;
     }
