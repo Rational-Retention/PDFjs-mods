@@ -916,7 +916,12 @@ class PDFFindController {
       this._pageMatches[pageIndex]?.length > 0 ||
       this.pageHighlights[pageIndex]?.length > 0;
 
-    if (!hasMatches && fuzzySearchEnabled && query.length > 1) {
+    if (
+      !this.#fuzzyMatchFound &&
+      !hasMatches &&
+      fuzzySearchEnabled &&
+      query.length > 1
+    ) {
       this._pdfDocument
         .getPage(pageIndex + 1)
         .then(pdfPage => pdfPage.getTextContent({ disableNormalization: true }))
@@ -976,7 +981,7 @@ class PDFFindController {
             return;
           }
 
-          this.#fuzzyMatchFound = true;
+          // this.#fuzzyMatchFound = true;
           if (bestSubstring.score > this.#bestMatchScore) {
             console.log("New best match found with score", bestSubstring.score);
             console.log(bestSubstring);
@@ -1015,39 +1020,33 @@ class PDFFindController {
         });
     }
 
-    if (
-      this.#fuzzyMatchFound &&
-      pageIndex === this._linkService.pagesCount - 1
-    ) {
-      const [normalizedSubstring] = normalize(this.#bestMatchText);
-      const [normalizedPageContent] = normalize(pageContent);
+    const [normalizedSubstring] = normalize(this.#bestMatchText);
+    const [normalizedPageContent] = normalize(pageContent);
 
-      const normalizedIndex =
-        normalizedPageContent.indexOf(normalizedSubstring);
-      if (normalizedIndex === -1) {
-        return;
-      }
-
-      const matchedText = [
-        pageContent.slice(
-          normalizedIndex,
-          normalizedIndex + this.#bestMatchText.length
-        ),
-      ];
-
-      this.#calculateRegExpMatch(
-        matchedText.map(matchText => ({
-          query: this.#convertToRegExp(matchText, hasDiacritics),
-          color: "rgba(255, 165, 0, 0.3)",
-        })),
-        entireWord,
-        pageIndex,
-        pageContent
-      );
-
-      setTimeout(() => this.#updatePage(pageIndex), 50);
-      this._linkService.goToPage(pageIndex + 1);
+    const normalizedIndex = normalizedPageContent.indexOf(normalizedSubstring);
+    if (normalizedIndex === -1) {
+      return;
     }
+
+    const matchedText = [
+      pageContent.slice(
+        normalizedIndex,
+        normalizedIndex + this.#bestMatchText.length
+      ),
+    ];
+
+    this.#calculateRegExpMatch(
+      matchedText.map(matchText => ({
+        query: this.#convertToRegExp(matchText, hasDiacritics),
+        color: "rgba(255, 165, 0, 0.3)",
+      })),
+      entireWord,
+      pageIndex,
+      pageContent
+    );
+
+    setTimeout(() => this.#updatePage(pageIndex), 50);
+    this._linkService.goToPage(pageIndex + 1);
 
     // When `highlightAll` is set, ensure that the matches on previously
     // rendered (and still active) pages are correctly highlighted.
