@@ -416,10 +416,6 @@ class PDFFindController {
 
   #fuzzyMatchFound = false;
 
-  #bestMatchScore = 0;
-
-  #bestMatchText = null;
-
   /**
    * @param {PDFFindControllerOptions} options
    */
@@ -981,72 +977,38 @@ class PDFFindController {
             return;
           }
 
-          // this.#fuzzyMatchFound = true;
-          if (bestSubstring.score > this.#bestMatchScore) {
-            console.log("New best match found with score", bestSubstring.score);
-            console.log(bestSubstring);
-            this.#bestMatchScore = bestSubstring.score;
-            this.#bestMatchText = bestSubstring.text;
+          this.#fuzzyMatchFound = true;
+
+          const [normalizedSubstring] = normalize(bestSubstring);
+          const [normalizedPageContent] = normalize(pageContent);
+
+          const normalizedIndex =
+            normalizedPageContent.indexOf(normalizedSubstring);
+          if (normalizedIndex === -1) {
+            return;
           }
 
-          // const [normalizedSubstring] = normalize(bestSubstring);
-          // const [normalizedPageContent] = normalize(pageContent);
-          //
-          // const normalizedIndex =
-          //   normalizedPageContent.indexOf(normalizedSubstring);
-          // if (normalizedIndex === -1) {
-          //   return;
-          // }
-          //
-          // const matchedText = [
-          //   pageContent.slice(
-          //     normalizedIndex,
-          //     normalizedIndex + bestSubstring.length
-          //   ),
-          // ];
-          //
-          // this.#calculateRegExpMatch(
-          //   matchedText.map(matchText => ({
-          //     query: this.#convertToRegExp(matchText, hasDiacritics),
-          //     color: "rgba(255, 165, 0, 0.3)",
-          //   })),
-          //   entireWord,
-          //   pageIndex,
-          //   pageContent
-          // );
-          //
-          // setTimeout(() => this.#updatePage(pageIndex), 50);
-          // this._linkService.goToPage(pageIndex + 1);
+          const matchedText = [
+            pageContent.slice(
+              normalizedIndex,
+              normalizedIndex + bestSubstring.length
+            ),
+          ];
+
+          this.#calculateRegExpMatch(
+            matchedText.map(matchText => ({
+              query: this.#convertToRegExp(matchText, hasDiacritics),
+              color: "rgba(255, 165, 0, 0.3)",
+            })),
+            entireWord,
+            pageIndex,
+            pageContent
+          );
+
+          setTimeout(() => this.#updatePage(pageIndex), 50);
+          this._linkService.goToPage(pageIndex + 1);
         });
     }
-
-    const [normalizedSubstring] = normalize(this.#bestMatchText);
-    const [normalizedPageContent] = normalize(pageContent);
-
-    const normalizedIndex = normalizedPageContent.indexOf(normalizedSubstring);
-    if (normalizedIndex === -1) {
-      return;
-    }
-
-    const matchedText = [
-      pageContent.slice(
-        normalizedIndex,
-        normalizedIndex + this.#bestMatchText.length
-      ),
-    ];
-
-    this.#calculateRegExpMatch(
-      matchedText.map(matchText => ({
-        query: this.#convertToRegExp(matchText, hasDiacritics),
-        color: "rgba(255, 165, 0, 0.3)",
-      })),
-      entireWord,
-      pageIndex,
-      pageContent
-    );
-
-    setTimeout(() => this.#updatePage(pageIndex), 50);
-    this._linkService.goToPage(pageIndex + 1);
 
     // When `highlightAll` is set, ensure that the matches on previously
     // rendered (and still active) pages are correctly highlighted.
@@ -1128,7 +1090,7 @@ class PDFFindController {
         }
       }
     }
-    return highestScore > 0.3 ? { text: bestMatch, score: highestScore } : null;
+    return highestScore > 0.3 ? bestMatch : null;
   }
 
   #similarityScore(a, b) {
