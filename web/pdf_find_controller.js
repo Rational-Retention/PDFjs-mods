@@ -19,7 +19,6 @@
 
 import { binarySearchFirstItem, scrollIntoView } from "./ui_utils.js";
 import { getCharacterType, getNormalizeWithNFKC } from "./pdf_find_utils.js";
-import Fuse from "fuse.js";
 import { promiseWithResolvers } from "../src/core/promise_with_resolvers.js";
 
 const FindState = {
@@ -958,16 +957,12 @@ class PDFFindController {
             });
           }
 
-          const fuse = new Fuse(slidingChunks, {
-            keys: ["text"],
-            includeScore: true,
-            threshold: 0.3,
-            ignoreLocation: true,
-            distance: 100,
-            minMatchCharLength: 3,
-          });
+          const fuzzyMatches = this.#findSubstringMatches(
+            slidingChunks,
+            cleanedQuery,
+            0.2
+          );
 
-          const fuzzyMatches = fuse.search(cleanedQuery);
           const bestMatch = fuzzyMatches[0];
           if (!bestMatch) {
             return;
@@ -1041,6 +1036,26 @@ class PDFFindController {
     }
   }
 
+  #findSubstringMatches(slidingChunks, query, threshold) {
+    const fuzzyMatches = [];
+    const [normalizedQuery] = normalize(query);
+
+    for (let i = 0; i < slidingChunks.length; i++) {
+      const [normalizedPhrase] = normalize(slidingChunks[i].text);
+
+      const score = this.#tokenSetSimilarity(normalizedPhrase, normalizedQuery);
+
+      if (score > threshold) {
+        fuzzyMatches.push({
+          item: slidingChunks[i],
+          refIndex: i,
+          score,
+        });
+      }
+    }
+    return fuzzyMatches.sort((a, b) => b.score - a.score);
+  }
+
   #findBestSubstringMatch(text, query) {
     if (!text || !query) {
       return null;
@@ -1052,9 +1067,15 @@ class PDFFindController {
     let highestScore = 0;
 
     const [normalizedQuery] = normalize(query);
+    const queryLength = query.split(/\s+/).length;
+    const coarseness = queryLength / 10 < 1 ? 1 : Math.floor(queryLength / 10);
 
-    for (let i = 0; i < textWords.length; i++) {
-      for (let j = i + 3; j <= textWords.length && j - i <= 40; j++) {
+    for (let i = 0; i < textWords.length; i += coarseness) {
+      for (
+        let j = Math.floor(i + queryLength * 0.75);
+        j <= textWords.length && j - i <= Math.ceil(queryLength * 1.5);
+        j += coarseness
+      ) {
         const phrase = textWords.slice(i, j).join(" ");
         const [normalizedPhrase] = normalize(phrase);
 
@@ -1069,7 +1090,6 @@ class PDFFindController {
         }
       }
     }
-
     return highestScore > 0.3 ? bestMatch : null;
   }
 
