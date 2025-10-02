@@ -977,7 +977,7 @@ class PDFFindController {
             return;
           }
 
-          this.#fuzzyMatchFound = true;
+          // this.#fuzzyMatchFound = true;
 
           const [normalizedSubstring] = normalize(bestSubstring);
           const [normalizedPageContent] = normalize(pageContent);
