@@ -1027,12 +1027,11 @@ class PDFFindController {
     );
 
     this._matchesCountTotal += pageMatchesCount;
-    if (++this.#visitedPagesCount === this._linkService.pagesCount) {
-      this.#fuzzyMatchFound = false;
+    if (this.#updateMatchesCountOnProgress) {
+      this.#updateUIResultsCount();
+    } else if (++this.#visitedPagesCount === this._linkService.pagesCount) {
       // For example, in GeckoView we want to have only the final update because
       // the Java side provides only one object to update the counts.
-      this.#updateUIResultsCount();
-    } else if (this.#updateMatchesCountOnProgress) {
       this.#updateUIResultsCount();
     }
   }
@@ -1204,6 +1203,7 @@ class PDFFindController {
 
     const { fuzzySearchEnabled } = this.#state;
     if (fuzzySearchEnabled && index === this._linkService.pagesCount - 1) {
+      this.#fuzzyMatchFound = false;
       this._eventBus.dispatch("fuzzysearching", {
         source: this,
         isSearching: false,
