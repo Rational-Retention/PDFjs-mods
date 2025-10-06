@@ -504,6 +504,7 @@ class PDFFindController {
     }
     this.#state = state;
     this.#state.fuzzySearchEnabled = state.fuzzySearchEnabled ?? false;
+    this.#fuzzyMatchFound = false;
     if (type !== "highlightallchange") {
       this.#updateUIState(FindState.PENDING);
     }
