@@ -1460,6 +1460,8 @@ class PDFFindController {
   }
 
   #updateUIResultsCount() {
+    console.log("Setting fuzzy match found to false");
+    this.#fuzzyMatchFound = false;
     this._eventBus.dispatch("updatefindmatchescount", {
       source: this,
       matchesCount: this.#requestMatchesCount(),
