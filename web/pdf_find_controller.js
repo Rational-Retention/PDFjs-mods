@@ -504,6 +504,7 @@ class PDFFindController {
     }
     this.#state = state;
     this.#state.fuzzySearchEnabled = state.fuzzySearchEnabled ?? false;
+    this.#fuzzyMatchFound = false;
     if (type !== "highlightallchange") {
       this.#updateUIState(FindState.PENDING);
     }
@@ -1203,7 +1204,6 @@ class PDFFindController {
 
     const { fuzzySearchEnabled } = this.#state;
     if (fuzzySearchEnabled && index === this._linkService.pagesCount - 1) {
-      this.#fuzzyMatchFound = false;
       this._eventBus.dispatch("fuzzysearching", {
         source: this,
         isSearching: false,
