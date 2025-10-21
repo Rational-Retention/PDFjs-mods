@@ -79,8 +79,6 @@ const DIACRITICS_EXCEPTION = new Set([
 let DIACRITICS_EXCEPTION_STR; // Lazily initialized, see below.
 
 const DIACRITICS_REG_EXP = /\p{M}+/gu;
-const SPECIAL_CHARS_REG_EXP =
-  /([.*+?^${}()|[\]\\])|(\p{P})|(\s+)|(\p{M})|(\p{L})/gu;
 const NOT_DIACRITIC_FROM_END_REG_EXP = /([^\p{M}])\p{M}*$/u;
 const NOT_DIACRITIC_FROM_START_REG_EXP = /^\p{M}*([^\p{M}])/u;
 
@@ -776,6 +774,8 @@ class PDFFindController {
   }
 
   #convertToRegExpString(query, hasDiacritics) {
+    const SPECIAL_CHARS_REG_EXP =
+      /([.*+?^${}()|[\]\\])|(\p{P})|(\s+)|(\p{M})|(\p{L})/gu;
     const { matchDiacritics } = this.#state;
     let isUnicode = false;
     query = query.replaceAll(
