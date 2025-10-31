@@ -743,7 +743,7 @@ class PDFFindController {
       const pageContent = this._pageContents[i];
 
       queries.forEach((query, index) => {
-        if (query.test(pageContent)) {
+        if (query.exec(pageContent)) {
           foundIndices.add(index);
         }
       });
