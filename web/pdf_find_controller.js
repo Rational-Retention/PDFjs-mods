@@ -79,6 +79,8 @@ const DIACRITICS_EXCEPTION = new Set([
 let DIACRITICS_EXCEPTION_STR; // Lazily initialized, see below.
 
 const DIACRITICS_REG_EXP = /\p{M}+/gu;
+const SPECIAL_CHARS_REG_EXP =
+  /([.*+?^${}()|[\]\\])|(\p{P})|(\s+)|(\p{M})|(\p{L})/gu;
 const NOT_DIACRITIC_FROM_END_REG_EXP = /([^\p{M}])\p{M}*$/u;
 const NOT_DIACRITIC_FROM_START_REG_EXP = /^\p{M}*([^\p{M}])/u;
 
@@ -431,6 +433,10 @@ class PDFFindController {
     this.#reset();
     eventBus._on("find", this.#onFind.bind(this));
     eventBus._on("findbarclose", this.#onFindBarClose.bind(this));
+    eventBus._on(
+      "gethighlightable",
+      this.#onGetHighlightableQueries.bind(this)
+    );
   }
 
   get highlightMatches() {
@@ -700,6 +706,47 @@ class PDFFindController {
   }
 
   /**
+   * Determine which queries can be matched in the document
+   * Return a set of indices that can be found
+   */
+  #onGetHighlightableQueries() {
+    const query = this.#query;
+    if (query.length === 0) {
+      return; // Do nothing: no queries to match.
+    }
+
+    const hasDiacritics = this._hasDiacritics[0];
+    const queries = [
+      {
+        query: this.#convertToRegExp(query, hasDiacritics),
+        color: null,
+      },
+    ];
+
+    const foundIndices = this.#getRegExpMatches(queries);
+
+    this._eventBus.dispatch("returnhighlightablequeryindices", {
+      source: this,
+      foundIndices,
+    });
+  }
+
+  #getRegExpMatches(queries) {
+    const foundIndices = new Set();
+
+    for (let i = 0; i < this._linkService.pagesCount; i++) {
+      const pageContent = this._pageContents[i];
+
+      queries.forEach((query, index) => {
+        if (query.test(pageContent)) {
+          foundIndices.add(index);
+        }
+      });
+    }
+    return foundIndices;
+  }
+
+  /**
    * Determine if the search query constitutes a "whole word", by comparing the
    * first/last character type with the preceding/following character type.
    */
@@ -774,8 +821,6 @@ class PDFFindController {
   }
 
   #convertToRegExpString(query, hasDiacritics) {
-    const SPECIAL_CHARS_REG_EXP =
-      /([.*+?^${}()|[\]\\])|(\p{P})|(\s+)|(\p{M})|(\p{L})/gu;
     const { matchDiacritics } = this.#state;
     let isUnicode = false;
     query = query.replaceAll(
