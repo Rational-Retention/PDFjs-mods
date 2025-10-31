@@ -711,6 +711,8 @@ class PDFFindController {
    */
   #onGetHighlightableQueries(state) {
     this.#state = state;
+    this.#extractText();
+
     const termHighlighting = this.termHighlighting;
     if (Object.keys(termHighlighting).length === 0) {
       return; // Do nothing: no queries to match.
@@ -743,7 +745,8 @@ class PDFFindController {
       const pageContent = this._pageContents[i];
 
       queries.forEach((query, index) => {
-        if (query.exec(pageContent)) {
+        const queryString = query.query;
+        if (queryString.exec(pageContent)) {
           foundIndices.add(index);
         }
       });
