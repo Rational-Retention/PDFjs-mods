@@ -711,20 +711,24 @@ class PDFFindController {
    */
   #onGetHighlightableQueries(state) {
     this.#state = state;
-    const query = this.#query;
-    if (query.length === 0) {
+    const termHighlighting = this.termHighlighting;
+    if (Object.keys(termHighlighting).length === 0) {
       return; // Do nothing: no queries to match.
     }
 
     const hasDiacritics = this._hasDiacritics[0];
-    const queries = [
-      {
-        query: this.#convertToRegExp(query, hasDiacritics),
-        color: null,
-      },
-    ];
+    const termHighlightingQueries = Object.entries(termHighlighting).map(
+      ([term, color]) => {
+        const termQuery = this.#normalizeQuery(term);
 
-    const foundIndices = this.#getRegExpMatches(queries);
+        return {
+          query: this.#convertToRegExp(termQuery, hasDiacritics),
+          color,
+        };
+      }
+    );
+
+    const foundIndices = this.#getRegExpMatches(termHighlightingQueries);
 
     this._eventBus.dispatch("returnhighlightablequeryindices", {
       source: this,
