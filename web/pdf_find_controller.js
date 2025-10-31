@@ -709,7 +709,8 @@ class PDFFindController {
    * Determine which queries can be matched in the document
    * Return a set of indices that can be found
    */
-  #onGetHighlightableQueries() {
+  #onGetHighlightableQueries(state) {
+    this.#state = state;
     const query = this.#query;
     if (query.length === 0) {
       return; // Do nothing: no queries to match.
