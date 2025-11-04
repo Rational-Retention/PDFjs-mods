@@ -721,25 +721,24 @@ class PDFFindController {
     this._pageContents = [];
     this._pageDiffs = [];
     this._hasDiacritics = [];
-    this.#extractText();
+    this.#extractText().then(() => {
+      const hasDiacritics = this._hasDiacritics[0];
+      const termHighlightingQueries = Object.entries(termHighlighting).map(
+        ([term, color]) => {
+          const termQuery = this.#normalizeQuery(term);
 
-    const hasDiacritics = this._hasDiacritics[0];
-    const termHighlightingQueries = Object.entries(termHighlighting).map(
-      ([term, color]) => {
-        const termQuery = this.#normalizeQuery(term);
+          return {
+            query: this.#convertToRegExp(termQuery, hasDiacritics),
+            color,
+          };
+        }
+      );
 
-        return {
-          query: this.#convertToRegExp(termQuery, hasDiacritics),
-          color,
-        };
-      }
-    );
-
-    const foundIndices = this.#getRegExpMatches(termHighlightingQueries);
-
-    this._eventBus.dispatch("returnhighlightablequeryindices", {
-      source: this,
-      foundIndices,
+      const foundIndices = this.#getRegExpMatches(termHighlightingQueries);
+      this._eventBus.dispatch("returnhighlightablequeryindices", {
+        source: this,
+        foundIndices,
+      });
     });
   }
 
@@ -1198,7 +1197,7 @@ class PDFFindController {
   #extractText() {
     // Perform text extraction once if this method is called multiple times.
     if (this._extractTextPromises.length > 0) {
-      return;
+      return Promise.resolve();
     }
 
     let deferred = Promise.resolve();
@@ -1245,6 +1244,7 @@ class PDFFindController {
           );
       });
     }
+    return deferred;
   }
 
   #updatePage(index) {
