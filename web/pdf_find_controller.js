@@ -711,12 +711,17 @@ class PDFFindController {
    */
   #onGetHighlightableQueries(state) {
     this.#state = state;
-    this.#extractText();
 
     const termHighlighting = this.termHighlighting;
     if (Object.keys(termHighlighting).length === 0) {
       return; // Do nothing: no queries to match.
     }
+
+    this._extractTextPromises = [];
+    this._pageContents = [];
+    this._pageDiffs = [];
+    this._hasDiacritics = [];
+    this.#extractText();
 
     const hasDiacritics = this._hasDiacritics[0];
     const termHighlightingQueries = Object.entries(termHighlighting).map(
@@ -746,7 +751,7 @@ class PDFFindController {
 
       queries.forEach((query, index) => {
         const queryString = query.query;
-        if (queryString.exec(pageContent)) {
+        if (queryString.test(pageContent)) {
           foundIndices.add(index);
         }
       });
