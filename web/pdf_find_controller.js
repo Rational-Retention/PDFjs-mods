@@ -734,28 +734,31 @@ class PDFFindController {
         }
       );
 
-      const foundIndices = this.#getRegExpMatches(termHighlightingQueries);
+      const queryPageMap = this.#getRegExpMatches(termHighlightingQueries);
       this._eventBus.dispatch("returnhighlightablequeryindices", {
         source: this,
-        foundIndices,
+        queryPageMap,
       });
     });
   }
 
   #getRegExpMatches(queries) {
-    const foundIndices = new Set();
+    const queryPageMap = {};
+    queries.forEach((_, index) => {
+      queryPageMap[index] = null;
+    });
 
     for (let i = 0; i < this._linkService.pagesCount; i++) {
       const pageContent = this._pageContents[i];
 
       queries.forEach((query, index) => {
         const queryString = query.query;
-        if (queryString.test(pageContent)) {
-          foundIndices.add(index);
+        if (queryPageMap[index] === null && queryString.test(pageContent)) {
+          queryPageMap[index] = i;
         }
       });
     }
-    return foundIndices;
+    return queryPageMap;
   }
 
   /**
