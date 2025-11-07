@@ -707,7 +707,7 @@ class PDFFindController {
 
   /**
    * Determine which queries can be matched in the document
-   * Return a set of indices that can be found
+   * Return a map from the query index to the page that query is found on
    */
   #onGetHighlightableQueries(state) {
     this.#state = state;
