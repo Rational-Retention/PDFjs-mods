@@ -84,9 +84,11 @@
     }
 
     &.selected {
-      background-color: color-mix(in srgb, currentColor 50%, transparent);
+      /*background-color: color-mix(in srgb, currentColor 50%, transparent);*/
       /*background-color: var(--highlight-selected-bg-color);*/
+      background-color: background;
       backdrop-filter: var(--highlight-selected-backdrop-filter);
+      box-shadow: 2px 2px darkgrey;
     }
   }
 
