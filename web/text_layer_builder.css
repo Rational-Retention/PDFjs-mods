@@ -84,7 +84,8 @@
     }
 
     &.selected {
-      background-color: var(--highlight-selected-bg-color);
+      background-color: color-mix(in srgb, currentColor 50%, transparent);
+      /*background-color: var(--highlight-selected-bg-color);*/
       backdrop-filter: var(--highlight-selected-backdrop-filter);
     }
   }
