@@ -433,6 +433,10 @@ class PDFFindController {
     this.#reset();
     eventBus._on("find", this.#onFind.bind(this));
     eventBus._on("findbarclose", this.#onFindBarClose.bind(this));
+    eventBus._on(
+      "gethighlightable",
+      this.#onGetHighlightableQueries.bind(this)
+    );
   }
 
   get highlightMatches() {
@@ -699,6 +703,62 @@ class PDFFindController {
         return false;
     }
     return true;
+  }
+
+  /**
+   * Determine which queries can be matched in the document
+   * Return a map from the query index to the page that query is found on
+   */
+  #onGetHighlightableQueries(state) {
+    this.#state = state;
+
+    const termHighlighting = this.termHighlighting;
+    if (Object.keys(termHighlighting).length === 0) {
+      return; // Do nothing: no queries to match.
+    }
+
+    this._extractTextPromises = [];
+    this._pageContents = [];
+    this._pageDiffs = [];
+    this._hasDiacritics = [];
+    this.#extractText().then(() => {
+      const hasDiacritics = this._hasDiacritics[0];
+      const termHighlightingQueries = Object.entries(termHighlighting).map(
+        ([term, color]) => {
+          const termQuery = this.#normalizeQuery(term);
+
+          return {
+            query: this.#convertToRegExp(termQuery, hasDiacritics),
+            color,
+          };
+        }
+      );
+
+      const queryPageMap = this.#getRegExpMatches(termHighlightingQueries);
+      this._eventBus.dispatch("returnhighlightablequeryindices", {
+        source: this,
+        queryPageMap,
+      });
+    });
+  }
+
+  #getRegExpMatches(queries) {
+    const queryPageMap = {};
+    queries.forEach((_, index) => {
+      queryPageMap[index] = null;
+    });
+
+    for (let i = 0; i < this._linkService.pagesCount; i++) {
+      const pageContent = this._pageContents[i];
+
+      queries.forEach((query, index) => {
+        const queryString = query.query;
+        if (queryPageMap[index] === null && queryString.test(pageContent)) {
+          queryPageMap[index] = i;
+        }
+      });
+    }
+    return queryPageMap;
   }
 
   /**
@@ -1140,7 +1200,7 @@ class PDFFindController {
   #extractText() {
     // Perform text extraction once if this method is called multiple times.
     if (this._extractTextPromises.length > 0) {
-      return;
+      return Promise.resolve();
     }
 
     let deferred = Promise.resolve();
@@ -1187,6 +1247,7 @@ class PDFFindController {
           );
       });
     }
+    return deferred;
   }
 
   #updatePage(index) {
