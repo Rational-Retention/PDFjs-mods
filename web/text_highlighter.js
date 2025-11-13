@@ -176,9 +176,9 @@ class TextHighlighter {
     }
 
     function styleSpan(span, backgroundColor) {
-      span.style.background = backgroundColor; // backgroundColor is converted to rgb or rgba automatically
+      span.style.background = backgroundColor ?? "rgba(0 166 255 / 0.25)"; // backgroundColor is converted to rgb or rgba automatically
       if (span.className.includes("selected")) {
-        setAlpha(span, ".6"); // Highlight selected term with original color but more opacity
+        setAlpha(span, ".5"); // Highlight selected term with original color but more opacity
       } else {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
       }
@@ -217,7 +217,7 @@ class TextHighlighter {
           span.className = `${className} appended`;
         }
 
-        if (bgColor) {
+        if (bgColor || className.includes("selected")) {
           styleSpan(span, bgColor);
         }
 
