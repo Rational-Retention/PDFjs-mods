@@ -177,7 +177,11 @@ class TextHighlighter {
 
     function styleSpan(span, backgroundColor) {
       span.style.background = backgroundColor; // backgroundColor is converted to rgb or rgba automatically
-      setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
+      if (span.className.includes("selected")) {
+        setAlpha(span, 0.5);
+      } else {
+        setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
+      }
       span.style.margin = "-1px";
       span.style.padding = "1px";
       span.style.borderRadius = "0";
@@ -276,7 +280,7 @@ class TextHighlighter {
           begin.offset,
           end.offset,
           "highlight" + highlightSuffix,
-          isSelected ? null : match.color
+          match.color
         );
       } else {
         selectedLeft = appendTextToDiv(
@@ -284,7 +288,7 @@ class TextHighlighter {
           begin.offset,
           infinity.offset,
           "highlight begin" + highlightSuffix,
-          isSelected ? null : match.color
+          match.color
         );
         for (let n0 = begin.divIdx + 1, n1 = end.divIdx; n0 < n1; n0++) {
           textDivs[n0].className = "highlight middle" + highlightSuffix;
@@ -292,11 +296,7 @@ class TextHighlighter {
             styleSpan(textDivs[n0], match.color);
           }
         }
-        beginText(
-          end,
-          "highlight end" + highlightSuffix,
-          isSelected ? null : match.color
-        );
+        beginText(end, "highlight end" + highlightSuffix, match.color);
       }
       prevEnd = end;
 
