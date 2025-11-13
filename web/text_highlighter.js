@@ -176,8 +176,10 @@ class TextHighlighter {
     }
 
     function styleSpan(span, backgroundColor) {
-      if (!span.className.includes("selected")) {
-        span.style.background = backgroundColor; // backgroundColor is converted to rgb or rgba automatically
+      span.style.background = backgroundColor ?? "rgba(0 166 255 / 0.25)"; // backgroundColor is converted to rgb or rgba automatically
+      if (span.className.includes("selected")) {
+        setAlpha(span, ".5"); // Highlight selected term with original color but more opacity
+      } else {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
       }
       span.style.margin = "-1px";
@@ -190,7 +192,7 @@ class TextHighlighter {
         .split(",")
         .slice(0, 3)
         .map(element => element.replace(")", "").trim());
-      backgroundElements.push(".25)");
+      backgroundElements.push(alpha);
       span.style.background = backgroundElements.join(", ");
     }
 
@@ -215,7 +217,7 @@ class TextHighlighter {
           span.className = `${className} appended`;
         }
 
-        if (bgColor) {
+        if (bgColor || className.includes("selected")) {
           styleSpan(span, bgColor);
         }
 
@@ -278,7 +280,7 @@ class TextHighlighter {
           begin.offset,
           end.offset,
           "highlight" + highlightSuffix,
-          isSelected ? null : match.color
+          match.color
         );
       } else {
         selectedLeft = appendTextToDiv(
@@ -286,7 +288,7 @@ class TextHighlighter {
           begin.offset,
           infinity.offset,
           "highlight begin" + highlightSuffix,
-          isSelected ? null : match.color
+          match.color
         );
         for (let n0 = begin.divIdx + 1, n1 = end.divIdx; n0 < n1; n0++) {
           textDivs[n0].className = "highlight middle" + highlightSuffix;
@@ -294,11 +296,7 @@ class TextHighlighter {
             styleSpan(textDivs[n0], match.color);
           }
         }
-        beginText(
-          end,
-          "highlight end" + highlightSuffix,
-          isSelected ? null : match.color
-        );
+        beginText(end, "highlight end" + highlightSuffix, match.color);
       }
       prevEnd = end;
 
