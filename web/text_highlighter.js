@@ -178,7 +178,7 @@ class TextHighlighter {
     function styleSpan(span, backgroundColor) {
       span.style.background = backgroundColor; // backgroundColor is converted to rgb or rgba automatically
       if (span.className.includes("selected")) {
-        setAlpha(span, 0.5);
+        setAlpha(span, ".6"); // Highlight selected term with original color but more opacity
       } else {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
       }
@@ -192,7 +192,7 @@ class TextHighlighter {
         .split(",")
         .slice(0, 3)
         .map(element => element.replace(")", "").trim());
-      backgroundElements.push(".25)");
+      backgroundElements.push(alpha);
       span.style.background = backgroundElements.join(", ");
     }
 
