@@ -138,10 +138,13 @@ class AnnotationLayerBuilder {
       viewport: viewport.clone({ dontFlip: true }),
     });
 
-    this.#combineLinks(annotations);
+    const filteredAnnotations = Array.from(annotations).filter(
+      annotation => annotation.subtype !== "Link" || annotation.url
+    );
+    this.#coverSplitLinks(filteredAnnotations);
 
     await this.annotationLayer.render({
-      annotations,
+      filteredAnnotations,
       imageResourcesPath: this.imageResourcesPath,
       renderForms: this.renderForms,
       linkService: this.linkService,
@@ -185,9 +188,9 @@ class AnnotationLayerBuilder {
   }
 
   // Fixes bug where links were being split into multiple clickable pieces
-  // by giving increasing the rect of one annotation to cover multiple.
-  // For example emails had separate elements for the username and domain.
-  #combineLinks(annotations) {
+  // by increasing the rectangle of one annotation to cover multiple.
+  // For example emails had separate clickable parts for the username and domain
+  #coverSplitLinks(annotations) {
     for (const [index, annotation] of annotations.entries()) {
       if (index > 0) {
         const prev = annotations[index - 1];
