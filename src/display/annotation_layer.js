@@ -3066,19 +3066,6 @@ class AnnotationLayer {
         }
       }
 
-      // Fixes bug where links were being split into multiple clickable pieces
-      // For example emails had separate elements for the username and domain
-      if (index > 0) {
-        const prev = annotations[index - 1];
-        if (
-          prev.url === data.url &&
-          prev.rect[3] === data.rect[3] &&
-          prev.rect[2] === data.rect[0]
-        ) {
-          data.rect[0] = prev.rect[0];
-        }
-      }
-
       const rendered = element.render();
       if (data.hidden) {
         rendered.style.visibility = "hidden";
