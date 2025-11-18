@@ -138,13 +138,10 @@ class AnnotationLayerBuilder {
       viewport: viewport.clone({ dontFlip: true }),
     });
 
-    const filteredAnnotations = Array.from(annotations).filter(
-      annotation => annotation.subtype !== "Link" || annotation.url
-    );
-    this.#coverSplitLinks(filteredAnnotations);
+    this.#coverSplitLinks(annotations);
 
     await this.annotationLayer.render({
-      filteredAnnotations,
+      annotations,
       imageResourcesPath: this.imageResourcesPath,
       renderForms: this.renderForms,
       linkService: this.linkService,
