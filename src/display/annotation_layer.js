@@ -3032,7 +3032,7 @@ class AnnotationLayer {
       elements: null,
     };
 
-    for (const [index, data] of annotations.entries()) {
+    for (const data of annotations) {
       if (data.noHTML) {
         continue;
       }
