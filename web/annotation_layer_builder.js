@@ -191,12 +191,17 @@ class AnnotationLayerBuilder {
     for (const [index, annotation] of annotations.entries()) {
       if (index > 0) {
         const prev = annotations[index - 1];
+        const prevStart = prev.rect[0];
+        const currentStart = annotation.rect[0];
+        const prevEnd = prev.rect[2];
+        const prevTop = prev.rect[3];
+        const currentTop = annotation.rect[3];
         if (
           prev.url === annotation.url &&
-          prev.rect[3] === annotation.rect[3] &&
-          prev.rect[2] === annotation.rect[0]
+          prevTop === currentTop &&
+          prevEnd === currentStart
         ) {
-          annotation.rect[0] = prev.rect[0];
+          annotation.rect[0] = prevStart;
         }
       }
     }
