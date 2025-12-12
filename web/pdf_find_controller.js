@@ -433,10 +433,6 @@ class PDFFindController {
     this.#reset();
     eventBus._on("find", this.#onFind.bind(this));
     eventBus._on("findbarclose", this.#onFindBarClose.bind(this));
-    eventBus._on(
-      "gethighlightable",
-      this.#onGetHighlightableQueries.bind(this)
-    );
   }
 
   get highlightMatches() {
@@ -634,6 +630,8 @@ class PDFFindController {
     this._findTimeout = null;
 
     this._firstPageCapability = promiseWithResolvers();
+
+    this._queryPageMap = {};
   }
 
   /**
@@ -706,62 +704,6 @@ class PDFFindController {
   }
 
   /**
-   * Determine which queries can be matched in the document
-   * Return a map from the query index to the page that query is found on
-   */
-  #onGetHighlightableQueries(state) {
-    this.#state = state;
-
-    const termHighlighting = this.termHighlighting;
-    if (Object.keys(termHighlighting).length === 0) {
-      return; // Do nothing: no queries to match.
-    }
-
-    this._extractTextPromises = [];
-    this._pageContents = [];
-    this._pageDiffs = [];
-    this._hasDiacritics = [];
-    this.#extractText().then(() => {
-      const hasDiacritics = this._hasDiacritics[0];
-      const termHighlightingQueries = Object.entries(termHighlighting).map(
-        ([term, color]) => {
-          const termQuery = this.#normalizeQuery(term);
-
-          return {
-            query: this.#convertToRegExp(termQuery, hasDiacritics),
-            color,
-          };
-        }
-      );
-
-      const queryPageMap = this.#getRegExpMatches(termHighlightingQueries);
-      this._eventBus.dispatch("returnhighlightablequeryindices", {
-        source: this,
-        queryPageMap,
-      });
-    });
-  }
-
-  #getRegExpMatches(queries) {
-    const queryPageMap = {};
-    queries.forEach((_, index) => {
-      queryPageMap[index] = null;
-    });
-
-    for (let i = 0; i < this._linkService.pagesCount; i++) {
-      const pageContent = this._pageContents[i];
-
-      queries.forEach((query, index) => {
-        const queryString = query.query;
-        if (queryPageMap[index] === null && queryString.test(pageContent)) {
-          queryPageMap[index] = i;
-        }
-      });
-    }
-    return queryPageMap;
-  }
-
-  /**
    * Determine if the search query constitutes a "whole word", by comparing the
    * first/last character type with the preceding/following character type.
    */
@@ -806,13 +748,19 @@ class PDFFindController {
     const diffs = this._pageDiffs[pageIndex];
     let match;
 
-    for (const { query, color } of queries) {
+    queries.forEach((q, index) => {
+      const query = q.query;
+      const color = q.color;
       while ((match = query.exec(pageContent)) !== null) {
         if (
           entireWord &&
           !this.#isEntireWord(pageContent, match.index, match[0].length)
         ) {
           continue;
+        }
+
+        if (this._queryPageMap[index] === null) {
+          this._queryPageMap[index] = pageIndex;
         }
 
         const [matchPos, matchLen] = getOriginalIndex(
@@ -832,7 +780,7 @@ class PDFFindController {
           }
         }
       }
-    }
+    });
   }
 
   #convertToRegExpString(query, hasDiacritics) {
@@ -967,7 +915,11 @@ class PDFFindController {
 
     queries = queries.filter(_query => _query.query !== null);
 
+    this.initializeQueryPageMap(pageIndex, queries);
+
     this.#calculateRegExpMatch(queries, entireWord, pageIndex, pageContent);
+
+    this.dispatchQueryPageMap(pageIndex);
 
     const hasMatches =
       this._pageMatches[pageIndex]?.length > 0 ||
@@ -1094,6 +1046,23 @@ class PDFFindController {
       // For example, in GeckoView we want to have only the final update because
       // the Java side provides only one object to update the counts.
       this.#updateUIResultsCount();
+    }
+  }
+
+  initializeQueryPageMap(pageIndex, queries) {
+    if (pageIndex === 0) {
+      queries.forEach((_, index) => {
+        this._queryPageMap[index] = null;
+      });
+    }
+  }
+
+  dispatchQueryPageMap(pageIndex) {
+    if (pageIndex === this._pageContents.length - 1) {
+      this._eventBus.dispatch("returnQueryPageMap", {
+        source: this,
+        queryPageMap: this._queryPageMap,
+      });
     }
   }
 
