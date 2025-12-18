@@ -979,96 +979,90 @@ class PDFFindController {
       fuzzySearchEnabled &&
       query.length > 1
     ) {
-      this._pdfDocument
-        .getPage(pageIndex + 1)
-        .then(pdfPage => pdfPage.getTextContent({ disableNormalization: true }))
-        .then(textContent => {
-          const originalTextItems = textContent.items
-            .map(item => item.str)
-            .filter(originalTextItem => originalTextItem !== "");
-          const items = [];
+      const originalTextItems = [];
+      const pageWords = pageContent.split(" ");
+      for (let i = 0; i < pageWords.length; i += 10) {
+        originalTextItems.push(pageWords.slice(i, i + 10).join(" "));
+      }
 
-          originalTextItems.forEach((item, index) => {
-            if (
-              item.length === 1 ||
-              originalTextItems[index - 1]?.length === 1
-            ) {
-              if (items.length > 0) {
-                items[items.length - 1] = `${items.at(-1)}${item}`;
-              } else {
-                items.push(item);
-              }
-            } else {
-              items.push(item);
-            }
-          });
-
-          const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
-
-          const windowSize = 5;
-          const step = 1;
-          const slidingChunks = [];
-
-          for (let i = 0; i <= items.length - windowSize; i += step) {
-            const windowChunks = items.slice(i, i + windowSize);
-            slidingChunks.push({
-              text: windowChunks.join("\n"),
-              indices: [i, i + windowSize - 1],
-              items: windowChunks,
-            });
+      const items = [];
+      originalTextItems.forEach((item, index) => {
+        if (item.length === 1 || originalTextItems[index - 1]?.length === 1) {
+          if (items.length > 0) {
+            items[items.length - 1] = `${items.at(-1)}${item}`;
+          } else {
+            items.push(item);
           }
+        } else {
+          items.push(item);
+        }
+      });
 
-          const fuzzyMatches = this.#findSubstringMatches(
-            slidingChunks,
-            cleanedQuery,
-            0.2
-          );
+      const cleanedQuery = query.replaceAll(/\.{3,}/g, "").trim();
 
-          const bestMatch = fuzzyMatches[0];
-          if (!bestMatch) {
-            return;
-          }
+      const windowSize = 5;
+      const step = 1;
+      const slidingChunks = [];
 
-          const bestWindowText = bestMatch.item.text;
-          const bestSubstring = this.#findBestSubstringMatch(
-            bestWindowText,
-            cleanedQuery
-          );
-          if (!bestSubstring) {
-            return;
-          }
-
-          this.#fuzzyMatchFound = true;
-
-          const [normalizedSubstring] = normalize(bestSubstring);
-          const [normalizedPageContent] = normalize(pageContent);
-
-          const normalizedIndex =
-            normalizedPageContent.indexOf(normalizedSubstring);
-          if (normalizedIndex === -1) {
-            return;
-          }
-
-          const matchedText = [
-            pageContent.slice(
-              normalizedIndex,
-              normalizedIndex + bestSubstring.length
-            ),
-          ];
-
-          this.#calculateRegExpMatch(
-            matchedText.map(matchText => ({
-              query: this.#convertToRegExp(matchText, hasDiacritics),
-              color: "rgba(255, 165, 0, 0.3)",
-            })),
-            entireWord,
-            pageIndex,
-            pageContent
-          );
-
-          setTimeout(() => this.#updatePage(pageIndex), 50);
-          this._linkService.goToPage(pageIndex + 1);
+      for (let i = 0; i <= items.length - windowSize; i += step) {
+        const windowChunks = items.slice(i, i + windowSize);
+        slidingChunks.push({
+          text: windowChunks.join("\n"),
+          indices: [i, i + windowSize - 1],
+          items: windowChunks,
         });
+      }
+
+      const fuzzyMatches = this.#findSubstringMatches(
+        slidingChunks,
+        cleanedQuery,
+        0.2
+      );
+
+      const bestMatch = fuzzyMatches[0];
+      if (!bestMatch) {
+        return;
+      }
+
+      const bestWindowText = bestMatch.item.text;
+      const bestSubstring = this.#findBestSubstringMatch(
+        bestWindowText,
+        cleanedQuery
+      );
+      if (!bestSubstring) {
+        return;
+      }
+
+      this.#fuzzyMatchFound = true;
+
+      const [normalizedSubstring] = normalize(bestSubstring);
+      const [normalizedPageContent] = normalize(pageContent);
+
+      const normalizedIndex =
+        normalizedPageContent.indexOf(normalizedSubstring);
+      if (normalizedIndex === -1) {
+        return;
+      }
+
+      const matchedText = [
+        pageContent.slice(
+          normalizedIndex,
+          normalizedIndex + bestSubstring.length
+        ),
+      ];
+
+      this.#calculateRegExpMatch(
+        matchedText.map(matchText => ({
+          query: this.#convertToRegExp(matchText, hasDiacritics),
+          color: "rgba(255, 165, 0, 0.3)",
+        })),
+        entireWord,
+        pageIndex,
+        pageContent
+      );
+
+      setTimeout(() => this.#updatePage(pageIndex), 50);
+      this._linkService.goToPage(pageIndex + 1);
     }
 
     // When `highlightAll` is set, ensure that the matches on previously
