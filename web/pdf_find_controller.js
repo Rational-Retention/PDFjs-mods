@@ -504,6 +504,7 @@ class PDFFindController {
     }
     this.#state = state;
     this.#state.fuzzySearchEnabled = state.fuzzySearchEnabled ?? false;
+    this.#state.isSentimentHighlight = state.isSentimentHighlight ?? false;
     this.#fuzzyMatchFound = false;
     if (type !== "highlightallchange") {
       this.#updateUIState(FindState.PENDING);
@@ -733,7 +734,13 @@ class PDFFindController {
     return true;
   }
 
-  #calculateRegExpMatch(queries, entireWord, pageIndex, pageContent) {
+  #calculateRegExpMatch(
+    queries,
+    entireWord,
+    pageIndex,
+    pageContent,
+    isSentimentHighlight
+  ) {
     const matches = (this._pageMatches[pageIndex] = []);
     const matchesLength = (this._pageMatchesLength[pageIndex] = []);
     const highlights = (this._pageHighlights[pageIndex] = []);
@@ -745,6 +752,93 @@ class PDFFindController {
       // been stripped out.
       return;
     }
+
+    if (isSentimentHighlight) {
+      this.#calculateRegExpMatchForSentiment(
+        queries,
+        pageContent,
+        matches,
+        matchesLength,
+        highlights,
+        highlightsLength,
+        highlightsColors
+      );
+    } else {
+      this.#calculateRegExpMatchForHighlightAll(
+        queries,
+        entireWord,
+        pageIndex,
+        pageContent,
+        matches,
+        matchesLength,
+        highlights,
+        highlightsLength,
+        highlightsColors
+      );
+    }
+  }
+
+  #calculateRegExpMatchForSentiment(
+    queries,
+    pageContent,
+    matches,
+    matchesLength,
+    highlights,
+    highlightsLength,
+    highlightsColors
+  ) {
+    queries.forEach((q, index) => {
+      const query = q.query;
+      const color = q.color;
+      let startPage = 0;
+      let queryFound = false;
+
+      for (
+        let pageIndex = startPage;
+        pageIndex < this._pdfDocument.numPages;
+        pageIndex++
+      ) {
+        if (queryFound) {
+          continue;
+        }
+
+        const diffs = this._pageDiffs[pageIndex];
+        const match = query.exec(pageContent);
+
+        if (match !== null) {
+          if (this._queryPageMap[index] === null) {
+            this._queryPageMap[index] = pageIndex;
+          }
+
+          this.#handleMatch(
+            diffs,
+            match,
+            color,
+            matches,
+            matchesLength,
+            highlights,
+            highlightsLength,
+            highlightsColors
+          );
+
+          startPage = pageIndex;
+          queryFound = true;
+        }
+      }
+    });
+  }
+
+  #calculateRegExpMatchForHighlightAll(
+    queries,
+    entireWord,
+    pageIndex,
+    pageContent,
+    matches,
+    matchesLength,
+    highlights,
+    highlightsLength,
+    highlightsColors
+  ) {
     const diffs = this._pageDiffs[pageIndex];
     let match;
 
@@ -759,28 +853,46 @@ class PDFFindController {
           continue;
         }
 
-        if (this._queryPageMap[index] === null) {
-          this._queryPageMap[index] = pageIndex;
-        }
-
-        const [matchPos, matchLen] = getOriginalIndex(
+        this.#handleMatch(
           diffs,
-          match.index,
-          match[0].length
+          match,
+          color,
+          matches,
+          matchesLength,
+          highlights,
+          highlightsLength,
+          highlightsColors
         );
-
-        if (matchLen) {
-          if (color === null) {
-            matches.push(matchPos);
-            matchesLength.push(matchLen);
-          } else {
-            highlights.push(matchPos);
-            highlightsLength.push(matchLen);
-            highlightsColors.push(color);
-          }
-        }
       }
     });
+  }
+
+  #handleMatch(
+    diffs,
+    match,
+    color,
+    matches,
+    matchesLength,
+    highlights,
+    highlightsLength,
+    highlightsColors
+  ) {
+    const [matchPos, matchLen] = getOriginalIndex(
+      diffs,
+      match.index,
+      match[0].length
+    );
+
+    if (matchLen) {
+      if (color === null) {
+        matches.push(matchPos);
+        matchesLength.push(matchLen);
+      } else {
+        highlights.push(matchPos);
+        highlightsLength.push(matchLen);
+        highlightsColors.push(color);
+      }
+    }
   }
 
   #convertToRegExpString(query, hasDiacritics) {
@@ -887,7 +999,8 @@ class PDFFindController {
       return; // Do nothing: the matches should be wiped out already.
     }
 
-    const { entireWord, fuzzySearchEnabled } = this.#state;
+    const { entireWord, fuzzySearchEnabled, isSentimentHighlight } =
+      this.#state;
     const pageContent = this._pageContents[pageIndex];
     const hasDiacritics = this._hasDiacritics[pageIndex];
 
@@ -915,11 +1028,27 @@ class PDFFindController {
 
     queries = queries.filter(_query => _query.query !== null);
 
-    this.initializeQueryPageMap(pageIndex, queries);
+    if (isSentimentHighlight && pageIndex === 0) {
+      this.initializeQueryPageMap(pageIndex, queries);
 
-    this.#calculateRegExpMatch(queries, entireWord, pageIndex, pageContent);
+      this.#calculateRegExpMatch(
+        queries,
+        entireWord,
+        pageIndex,
+        pageContent,
+        true
+      );
 
-    this.dispatchQueryPageMap(pageIndex);
+      this.dispatchQueryPageMap(pageIndex);
+    } else if (!isSentimentHighlight) {
+      this.#calculateRegExpMatch(
+        queries,
+        entireWord,
+        pageIndex,
+        pageContent,
+        false
+      );
+    }
 
     const hasMatches =
       this._pageMatches[pageIndex]?.length > 0 ||
@@ -1010,7 +1139,8 @@ class PDFFindController {
         })),
         entireWord,
         pageIndex,
-        pageContent
+        pageContent,
+        false
       );
 
       setTimeout(() => this.#updatePage(pageIndex), 50);
