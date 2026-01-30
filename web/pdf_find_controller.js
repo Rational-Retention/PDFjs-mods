@@ -756,7 +756,6 @@ class PDFFindController {
     if (isSentimentHighlight) {
       this.#calculateRegExpMatchForSentiment(
         queries,
-        pageContent,
         matches,
         matchesLength,
         highlights,
@@ -780,7 +779,6 @@ class PDFFindController {
 
   #calculateRegExpMatchForSentiment(
     queries,
-    pageContent,
     matches,
     matchesLength,
     highlights,
@@ -803,7 +801,7 @@ class PDFFindController {
         }
 
         const diffs = this._pageDiffs[pageIndex];
-        const match = query.exec(pageContent);
+        const match = query.exec(this._pageContents[pageIndex]);
 
         if (match !== null) {
           if (this._queryPageMap[index] === null) {
@@ -1182,12 +1180,10 @@ class PDFFindController {
   }
 
   dispatchQueryPageMap(pageIndex) {
-    if (pageIndex === this._pageContents.length - 1) {
-      this._eventBus.dispatch("returnQueryPageMap", {
-        source: this,
-        queryPageMap: this._queryPageMap,
-      });
-    }
+    this._eventBus.dispatch("returnQueryPageMap", {
+      source: this,
+      queryPageMap: this._queryPageMap,
+    });
   }
 
   #findSubstringMatches(slidingChunks, query, threshold) {
