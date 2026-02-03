@@ -741,12 +741,6 @@ class PDFFindController {
     pageContent,
     isSentimentHighlight
   ) {
-    const matches = (this._pageMatches[pageIndex] = []);
-    const matchesLength = (this._pageMatchesLength[pageIndex] = []);
-    const highlights = (this._pageHighlights[pageIndex] = []);
-    const highlightsLength = (this._pageHighlightsLength[pageIndex] = []);
-    const highlightsColors = (this._pageHighlightsColors[pageIndex] = []);
-
     if (!queries.length) {
       // The query can be empty because some chars like diacritics could have
       // been stripped out.
@@ -754,37 +748,18 @@ class PDFFindController {
     }
 
     if (isSentimentHighlight) {
-      this.#calculateRegExpMatchForSentiment(
-        queries,
-        matches,
-        matchesLength,
-        highlights,
-        highlightsLength,
-        highlightsColors
-      );
+      this.#calculateRegExpMatchForSentiment(queries);
     } else {
       this.#calculateRegExpMatchForHighlightAll(
         queries,
         entireWord,
         pageIndex,
-        pageContent,
-        matches,
-        matchesLength,
-        highlights,
-        highlightsLength,
-        highlightsColors
+        pageContent
       );
     }
   }
 
-  #calculateRegExpMatchForSentiment(
-    queries,
-    matches,
-    matchesLength,
-    highlights,
-    highlightsLength,
-    highlightsColors
-  ) {
+  #calculateRegExpMatchForSentiment(queries) {
     queries.forEach((q, index) => {
       const query = q.query;
       const color = q.color;
@@ -799,6 +774,12 @@ class PDFFindController {
         if (queryFound) {
           continue;
         }
+
+        const matches = (this._pageMatches[pageIndex] = []);
+        const matchesLength = (this._pageMatchesLength[pageIndex] = []);
+        const highlights = (this._pageHighlights[pageIndex] = []);
+        const highlightsLength = (this._pageHighlightsLength[pageIndex] = []);
+        const highlightsColors = (this._pageHighlightsColors[pageIndex] = []);
 
         const diffs = this._pageDiffs[pageIndex];
         const match = query.exec(this._pageContents[pageIndex]);
@@ -830,13 +811,14 @@ class PDFFindController {
     queries,
     entireWord,
     pageIndex,
-    pageContent,
-    matches,
-    matchesLength,
-    highlights,
-    highlightsLength,
-    highlightsColors
+    pageContent
   ) {
+    const matches = (this._pageMatches[pageIndex] = []);
+    const matchesLength = (this._pageMatchesLength[pageIndex] = []);
+    const highlights = (this._pageHighlights[pageIndex] = []);
+    const highlightsLength = (this._pageHighlightsLength[pageIndex] = []);
+    const highlightsColors = (this._pageHighlightsColors[pageIndex] = []);
+
     const diffs = this._pageDiffs[pageIndex];
     let match;
 
