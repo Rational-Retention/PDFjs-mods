@@ -760,6 +760,14 @@ class PDFFindController {
   }
 
   #calculateRegExpMatchForSentiment(queries) {
+    this._pageMatches = [];
+    this._pageMatchesLength = [];
+    this._pageHighlights = [];
+    this._pageHighlightsLength = [];
+    this._pageHighlightsColors = [];
+
+    const pageContentsCopy = [...this._pageContents];
+
     queries.forEach((q, index) => {
       const query = q.query;
       const color = q.color;
@@ -782,12 +790,18 @@ class PDFFindController {
         const highlightsColors = (this._pageHighlightsColors[pageIndex] ??= []);
 
         const diffs = this._pageDiffs[pageIndex];
-        const match = query.exec(this._pageContents[pageIndex]);
+        const match = query.exec(pageContentsCopy[pageIndex]);
 
         if (match !== null) {
           if (this._queryPageMap[index] === null) {
             this._queryPageMap[index] = pageIndex;
           }
+
+          const [matchPos, matchLen] = getOriginalIndex(
+            diffs,
+            match.index,
+            match[0].length
+          );
 
           this.#handleMatch(
             diffs,
@@ -797,9 +811,14 @@ class PDFFindController {
             matchesLength,
             highlights,
             highlightsLength,
-            highlightsColors
+            highlightsColors,
+            matchPos,
+            matchLen
           );
 
+          pageContentsCopy[pageIndex] = pageContentsCopy[pageIndex].slice(
+            matchPos + matchLen
+          );
           startPage = pageIndex;
           queryFound = true;
         }
@@ -833,6 +852,12 @@ class PDFFindController {
           continue;
         }
 
+        const [matchPos, matchLen] = getOriginalIndex(
+          diffs,
+          match.index,
+          match[0].length
+        );
+
         this.#handleMatch(
           diffs,
           match,
@@ -841,28 +866,24 @@ class PDFFindController {
           matchesLength,
           highlights,
           highlightsLength,
-          highlightsColors
+          highlightsColors,
+          matchPos,
+          matchLen
         );
       }
     });
   }
 
   #handleMatch(
-    diffs,
-    match,
     color,
     matches,
     matchesLength,
     highlights,
     highlightsLength,
-    highlightsColors
+    highlightsColors,
+    matchPos,
+    matchLen
   ) {
-    const [matchPos, matchLen] = getOriginalIndex(
-      diffs,
-      match.index,
-      match[0].length
-    );
-
     if (matchLen) {
       if (color === null) {
         matches.push(matchPos);
