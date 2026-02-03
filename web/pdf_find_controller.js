@@ -775,11 +775,11 @@ class PDFFindController {
           continue;
         }
 
-        const matches = (this._pageMatches[pageIndex] = []);
-        const matchesLength = (this._pageMatchesLength[pageIndex] = []);
-        const highlights = (this._pageHighlights[pageIndex] = []);
-        const highlightsLength = (this._pageHighlightsLength[pageIndex] = []);
-        const highlightsColors = (this._pageHighlightsColors[pageIndex] = []);
+        const matches = (this._pageMatches[pageIndex] ??= []);
+        const matchesLength = (this._pageMatchesLength[pageIndex] ??= []);
+        const highlights = (this._pageHighlights[pageIndex] ??= []);
+        const highlightsLength = (this._pageHighlightsLength[pageIndex] ??= []);
+        const highlightsColors = (this._pageHighlightsColors[pageIndex] ??= []);
 
         const diffs = this._pageDiffs[pageIndex];
         const match = query.exec(this._pageContents[pageIndex]);
