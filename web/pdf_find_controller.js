@@ -768,11 +768,11 @@ class PDFFindController {
 
     const pageContentsCopy = [...this._pageContents];
     const pageStartIndices = Array(pageContentsCopy.length).fill(0);
+    let startPage = 0;
 
     queries.forEach((q, index) => {
       const query = q.query;
       const color = q.color;
-      let startPage = 0;
       let queryFound = false;
 
       for (
@@ -815,10 +815,12 @@ class PDFFindController {
             matchLen
           );
 
-          pageContentsCopy[pageIndex] = pageContentsCopy[pageIndex].slice(
-            matchPos + matchLen
+          const offset = pageStartIndices[pageIndex] + match.index - matchPos;
+
+          pageContentsCopy[pageIndex] = this._pageContents[pageIndex].slice(
+            matchPos + matchLen + offset
           );
-          pageStartIndices[pageIndex] = matchPos + matchLen;
+          pageStartIndices[pageIndex] = matchPos + matchLen + offset;
           startPage = pageIndex;
           queryFound = true;
         }
