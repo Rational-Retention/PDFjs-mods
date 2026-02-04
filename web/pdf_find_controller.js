@@ -804,8 +804,6 @@ class PDFFindController {
           );
 
           this.#handleMatch(
-            diffs,
-            match,
             color,
             matches,
             matchesLength,
@@ -859,8 +857,6 @@ class PDFFindController {
         );
 
         this.#handleMatch(
-          diffs,
-          match,
           color,
           matches,
           matchesLength,
