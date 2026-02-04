@@ -771,6 +771,7 @@ class PDFFindController {
     queries.forEach((q, index) => {
       const query = q.query;
       const color = q.color;
+      let currentStartIndex = 0;
       let startPage = 0;
       let queryFound = false;
 
@@ -799,7 +800,7 @@ class PDFFindController {
 
           const [matchPos, matchLen] = getOriginalIndex(
             diffs,
-            match.index,
+            currentStartIndex + match.index,
             match[0].length
           );
 
@@ -817,6 +818,7 @@ class PDFFindController {
           pageContentsCopy[pageIndex] = pageContentsCopy[pageIndex].slice(
             matchPos + matchLen
           );
+          currentStartIndex = matchPos + matchLen;
           startPage = pageIndex;
           queryFound = true;
         }
