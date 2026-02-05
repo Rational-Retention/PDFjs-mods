@@ -183,6 +183,7 @@ class TextHighlighter {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
       }
       span.style.borderRadius = "0";
+      span.style.transform = "";
       span.style.webkitTransform = "";
     }
 
@@ -209,9 +210,9 @@ class TextHighlighter {
         toOffset
       );
       const node = document.createTextNode(content);
-      if (className || bgColor) {
-        const span = document.createElement("span");
+      const span = document.createElement("span");
 
+      if (className || bgColor) {
         if (className) {
           span.className = `${className} appended`;
         }
@@ -222,7 +223,10 @@ class TextHighlighter {
         div.append(span);
         return className.includes("selected") ? span.offsetLeft : 0;
       }
-      div.append(node);
+      styleSpan(span, bgColor);
+
+      span.append(node);
+      div.append(span);
       return 0;
     }
 
