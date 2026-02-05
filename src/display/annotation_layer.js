@@ -273,7 +273,7 @@ class AnnotationElement {
     // But if an annotation is above an other one, then we must draw it
     // after the other one whatever the order is in the DOM, hence the
     // use of the z-index.
-    style.zIndex = "0"; // Hide all links in the PDF viewer
+    style.zIndex = 5 + this.parent.zIndex++; // Add 5 to ensure we are above the text layer
 
     if (data.popupRef) {
       container.setAttribute("aria-haspopup", "dialog");
