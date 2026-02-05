@@ -138,8 +138,6 @@ class AnnotationLayerBuilder {
       viewport: viewport.clone({ dontFlip: true }),
     });
 
-    this.#coverSplitLinks(annotations);
-
     await this.annotationLayer.render({
       annotations,
       imageResourcesPath: this.imageResourcesPath,
@@ -182,29 +180,6 @@ class AnnotationLayerBuilder {
       return;
     }
     this.div.hidden = true;
-  }
-
-  // Fixes bug where links were being split into multiple clickable pieces
-  // by increasing the rectangle of one annotation to cover multiple.
-  // For example emails had separate clickable parts for the username and domain
-  #coverSplitLinks(annotations) {
-    for (const [index, annotation] of annotations.entries()) {
-      if (index > 0) {
-        const prev = annotations[index - 1];
-        const prevStart = prev.rect[0];
-        const currentStart = annotation.rect[0];
-        const prevEnd = prev.rect[2];
-        const prevTop = prev.rect[3];
-        const currentTop = annotation.rect[3];
-        if (
-          prev.url === annotation.url &&
-          prevTop === currentTop &&
-          prevEnd === currentStart
-        ) {
-          annotation.rect[0] = prevStart;
-        }
-      }
-    }
   }
 
   #updatePresentationModeState(state) {
