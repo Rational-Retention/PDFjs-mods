@@ -183,6 +183,7 @@ class TextHighlighter {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
       }
       span.style.borderRadius = "0";
+      span.style.webkitTransform = "";
     }
 
     function setAlpha(span, alpha = ".25)") {
@@ -215,9 +216,7 @@ class TextHighlighter {
           span.className = `${className} appended`;
         }
 
-        if (bgColor || className.includes("selected")) {
-          styleSpan(span, bgColor);
-        }
+        styleSpan(span, bgColor);
 
         span.append(node);
         div.append(span);
