@@ -182,8 +182,6 @@ class TextHighlighter {
       } else {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
       }
-      span.style.margin = "-1px";
-      span.style.padding = "1px";
       span.style.borderRadius = "0";
     }
 
