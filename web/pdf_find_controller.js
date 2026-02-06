@@ -1033,7 +1033,7 @@ class PDFFindController {
       isSentimentHighlight &&
       pageIndex === this._linkService.pagesCount - 1
     ) {
-      this.initializeQueryPageMap(pageIndex, queries);
+      this.initializeQueryPageMap(queries);
 
       this.#calculateRegExpMatch(
         queries,
@@ -1177,12 +1177,10 @@ class PDFFindController {
     }
   }
 
-  initializeQueryPageMap(pageIndex, queries) {
-    if (pageIndex === 0) {
-      queries.forEach((_, index) => {
-        this._queryPageMap[index] = null;
-      });
-    }
+  initializeQueryPageMap(queries) {
+    queries.forEach((_, index) => {
+      this._queryPageMap[index] = null;
+    });
   }
 
   dispatchQueryPageMap(pageIndex) {
