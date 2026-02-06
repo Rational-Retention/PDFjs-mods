@@ -1029,7 +1029,10 @@ class PDFFindController {
 
     queries = queries.filter(_query => _query.query !== null);
 
-    if (isSentimentHighlight && pageIndex === 0) {
+    if (
+      isSentimentHighlight &&
+      pageIndex === this._linkService.pagesCount - 1
+    ) {
       this.initializeQueryPageMap(pageIndex, queries);
 
       this.#calculateRegExpMatch(
