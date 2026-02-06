@@ -61,8 +61,6 @@
       );
     }
 
-    margin: -1px;
-    padding: 1px;
     background-color: var(--highlight-bg-color);
     backdrop-filter: var(--highlight-backdrop-filter);
     border-radius: 4px;
@@ -71,22 +69,15 @@
       position: initial;
     }
 
-    &.begin {
-      border-radius: 4px 0 0 4px;
-    }
-
+    &.begin,
+    &.middle,
     &.end {
-      border-radius: 0 4px 4px 0;
-    }
-
-    &.middle {
       border-radius: 0;
     }
 
     &.selected {
       background-color: background;
       backdrop-filter: var(--highlight-selected-backdrop-filter);
-      box-shadow: 2px 2px darkgrey;
     }
   }
 

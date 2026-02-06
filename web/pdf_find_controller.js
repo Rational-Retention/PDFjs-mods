@@ -504,6 +504,7 @@ class PDFFindController {
     }
     this.#state = state;
     this.#state.fuzzySearchEnabled = state.fuzzySearchEnabled ?? false;
+    this.#state.isSentimentHighlight = state.isSentimentHighlight ?? false;
     this.#fuzzyMatchFound = false;
     if (type !== "highlightallchange") {
       this.#updateUIState(FindState.PENDING);
@@ -733,18 +734,112 @@ class PDFFindController {
     return true;
   }
 
-  #calculateRegExpMatch(queries, entireWord, pageIndex, pageContent) {
+  #calculateRegExpMatch(
+    queries,
+    entireWord,
+    pageIndex,
+    pageContent,
+    isSentimentHighlight
+  ) {
+    if (!queries.length) {
+      // The query can be empty because some chars like diacritics could have
+      // been stripped out.
+      return;
+    }
+
+    if (isSentimentHighlight) {
+      this.#calculateRegExpMatchForSentiment(queries);
+    } else {
+      this.#calculateRegExpMatchForHighlightAll(
+        queries,
+        entireWord,
+        pageIndex,
+        pageContent
+      );
+    }
+  }
+
+  #calculateRegExpMatchForSentiment(queries) {
+    this._pageMatches = [];
+    this._pageMatchesLength = [];
+    this._pageHighlights = [];
+    this._pageHighlightsLength = [];
+    this._pageHighlightsColors = [];
+
+    const pageContentsCopy = [...this._pageContents];
+    const pageStartIndices = Array(pageContentsCopy.length).fill(0);
+    let startPage = 0;
+
+    queries.forEach((q, index) => {
+      const query = q.query;
+      const color = q.color;
+      let queryFound = false;
+
+      for (
+        let pageIndex = startPage;
+        pageIndex < this._pdfDocument.numPages;
+        pageIndex++
+      ) {
+        if (queryFound) {
+          continue;
+        }
+
+        const matches = (this._pageMatches[pageIndex] ??= []);
+        const matchesLength = (this._pageMatchesLength[pageIndex] ??= []);
+        const highlights = (this._pageHighlights[pageIndex] ??= []);
+        const highlightsLength = (this._pageHighlightsLength[pageIndex] ??= []);
+        const highlightsColors = (this._pageHighlightsColors[pageIndex] ??= []);
+
+        const diffs = this._pageDiffs[pageIndex];
+        const match = query.exec(pageContentsCopy[pageIndex]);
+
+        if (match !== null) {
+          if (this._queryPageMap[index] === null) {
+            this._queryPageMap[index] = pageIndex;
+          }
+
+          const [matchPos, matchLen] = getOriginalIndex(
+            diffs,
+            pageStartIndices[pageIndex] + match.index,
+            match[0].length
+          );
+
+          this.#handleMatch(
+            color,
+            matches,
+            matchesLength,
+            highlights,
+            highlightsLength,
+            highlightsColors,
+            matchPos,
+            matchLen
+          );
+
+          const offset = pageStartIndices[pageIndex] + match.index - matchPos;
+
+          pageContentsCopy[pageIndex] = this._pageContents[pageIndex].slice(
+            matchPos + matchLen + offset
+          );
+          pageStartIndices[pageIndex] = matchPos + matchLen + offset;
+          startPage = pageIndex;
+          queryFound = true;
+        }
+      }
+    });
+  }
+
+  #calculateRegExpMatchForHighlightAll(
+    queries,
+    entireWord,
+    pageIndex,
+    pageContent
+  ) {
     const matches = (this._pageMatches[pageIndex] = []);
     const matchesLength = (this._pageMatchesLength[pageIndex] = []);
     const highlights = (this._pageHighlights[pageIndex] = []);
     const highlightsLength = (this._pageHighlightsLength[pageIndex] = []);
     const highlightsColors = (this._pageHighlightsColors[pageIndex] = []);
 
-    if (!queries.length) {
-      // The query can be empty because some chars like diacritics could have
-      // been stripped out.
-      return;
-    }
     const diffs = this._pageDiffs[pageIndex];
     let match;
 
@@ -759,28 +854,46 @@ class PDFFindController {
           continue;
         }
 
-        if (this._queryPageMap[index] === null) {
-          this._queryPageMap[index] = pageIndex;
-        }
-
         const [matchPos, matchLen] = getOriginalIndex(
           diffs,
           match.index,
           match[0].length
         );
 
-        if (matchLen) {
-          if (color === null) {
-            matches.push(matchPos);
-            matchesLength.push(matchLen);
-          } else {
-            highlights.push(matchPos);
-            highlightsLength.push(matchLen);
-            highlightsColors.push(color);
-          }
-        }
+        this.#handleMatch(
+          color,
+          matches,
+          matchesLength,
+          highlights,
+          highlightsLength,
+          highlightsColors,
+          matchPos,
+          matchLen
+        );
       }
     });
+  }
+
+  #handleMatch(
+    color,
+    matches,
+    matchesLength,
+    highlights,
+    highlightsLength,
+    highlightsColors,
+    matchPos,
+    matchLen
+  ) {
+    if (matchLen) {
+      if (color === null) {
+        matches.push(matchPos);
+        matchesLength.push(matchLen);
+      } else {
+        highlights.push(matchPos);
+        highlightsLength.push(matchLen);
+        highlightsColors.push(color);
+      }
+    }
   }
 
   #convertToRegExpString(query, hasDiacritics) {
@@ -887,7 +1000,8 @@ class PDFFindController {
       return; // Do nothing: the matches should be wiped out already.
     }
 
-    const { entireWord, fuzzySearchEnabled } = this.#state;
+    const { entireWord, fuzzySearchEnabled, isSentimentHighlight } =
+      this.#state;
     const pageContent = this._pageContents[pageIndex];
     const hasDiacritics = this._hasDiacritics[pageIndex];
 
@@ -915,11 +1029,27 @@ class PDFFindController {
 
     queries = queries.filter(_query => _query.query !== null);
 
-    this.initializeQueryPageMap(pageIndex, queries);
+    if (isSentimentHighlight && pageIndex === this._pdfDocument.numPages - 1) {
+      this.initializeQueryPageMap(queries);
 
-    this.#calculateRegExpMatch(queries, entireWord, pageIndex, pageContent);
+      this.#calculateRegExpMatch(
+        queries,
+        entireWord,
+        pageIndex,
+        pageContent,
+        true
+      );
 
-    this.dispatchQueryPageMap(pageIndex);
+      this.dispatchQueryPageMap(pageIndex);
+    } else if (!isSentimentHighlight) {
+      this.#calculateRegExpMatch(
+        queries,
+        entireWord,
+        pageIndex,
+        pageContent,
+        false
+      );
+    }
 
     const hasMatches =
       this._pageMatches[pageIndex]?.length > 0 ||
@@ -1010,13 +1140,31 @@ class PDFFindController {
         })),
         entireWord,
         pageIndex,
-        pageContent
+        pageContent,
+        false
       );
 
       setTimeout(() => this.#updatePage(pageIndex), 50);
       this._linkService.goToPage(pageIndex + 1);
     }
+    if (isSentimentHighlight && pageIndex === this._pdfDocument.numPages - 1) {
+      this.updateAllMatches();
+    } else if (!isSentimentHighlight) {
+      this.updateMatches(pageIndex);
+    }
+  }
 
+  updateAllMatches() {
+    for (
+      let pageIndex = 0;
+      pageIndex < this._pdfDocument.numPages;
+      pageIndex++
+    ) {
+      this.updateMatches(pageIndex);
+    }
+  }
+
+  updateMatches(pageIndex) {
     // When `highlightAll` is set, ensure that the matches on previously
     // rendered (and still active) pages are correctly highlighted.
     if (this.#state.highlightAll) {
@@ -1043,21 +1191,17 @@ class PDFFindController {
     }
   }
 
-  initializeQueryPageMap(pageIndex, queries) {
-    if (pageIndex === 0) {
-      queries.forEach((_, index) => {
-        this._queryPageMap[index] = null;
-      });
-    }
+  initializeQueryPageMap(queries) {
+    queries.forEach((_, index) => {
+      this._queryPageMap[index] = null;
+    });
   }
 
-  dispatchQueryPageMap(pageIndex) {
-    if (pageIndex === this._pageContents.length - 1) {
-      this._eventBus.dispatch("returnQueryPageMap", {
-        source: this,
-        queryPageMap: this._queryPageMap,
-      });
-    }
+  dispatchQueryPageMap() {
+    this._eventBus.dispatch("returnQueryPageMap", {
+      source: this,
+      queryPageMap: this._queryPageMap,
+    });
   }
 
   #findSubstringMatches(slidingChunks, query, threshold) {
