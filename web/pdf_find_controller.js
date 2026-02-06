@@ -1029,10 +1029,7 @@ class PDFFindController {
 
     queries = queries.filter(_query => _query.query !== null);
 
-    if (
-      isSentimentHighlight &&
-      pageIndex === this._linkService.pagesCount - 1
-    ) {
+    if (isSentimentHighlight && pageIndex === this._pdfDocument.numPages - 1) {
       this.initializeQueryPageMap(queries);
 
       this.#calculateRegExpMatch(
@@ -1150,7 +1147,24 @@ class PDFFindController {
       setTimeout(() => this.#updatePage(pageIndex), 50);
       this._linkService.goToPage(pageIndex + 1);
     }
+    if (isSentimentHighlight && pageIndex === this._pdfDocument.numPages - 1) {
+      this.updateAllMatches();
+    } else if (!isSentimentHighlight) {
+      this.updateMatches(pageIndex);
+    }
+  }
 
+  updateAllMatches() {
+    for (
+      let pageIndex = 0;
+      pageIndex < this._pdfDocument.numPages;
+      pageIndex++
+    ) {
+      this.updateMatches(pageIndex);
+    }
+  }
+
+  updateMatches(pageIndex) {
     // When `highlightAll` is set, ensure that the matches on previously
     // rendered (and still active) pages are correctly highlighted.
     if (this.#state.highlightAll) {
@@ -1183,7 +1197,7 @@ class PDFFindController {
     });
   }
 
-  dispatchQueryPageMap(pageIndex) {
+  dispatchQueryPageMap() {
     this._eventBus.dispatch("returnQueryPageMap", {
       source: this,
       queryPageMap: this._queryPageMap,
