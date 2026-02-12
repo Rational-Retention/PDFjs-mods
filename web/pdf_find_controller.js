@@ -1192,6 +1192,7 @@ class PDFFindController {
   }
 
   initializeQueryPageMap(queries) {
+    this._queryPageMap = {};
     queries.forEach((_, index) => {
       this._queryPageMap[index] = null;
     });
