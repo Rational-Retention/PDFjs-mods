@@ -308,6 +308,29 @@ describe("pdf_find_controller", function () {
     });
   });
 
+  it("selects an exact match on a later page when fuzzy search finds nothing on the current page", async function () {
+    // Page 13 is the only page containing 'Government'. With fuzzy search enabled the
+    // fallback runs on every page without an exact match and must not stall the search
+    // when it finds no candidate on the page the search is waiting on.
+    const { eventBus, pdfFindController } = await initPdfFindController();
+
+    await testSearch({
+      eventBus,
+      pdfFindController,
+      state: {
+        query: "Government",
+        entireWord: true,
+        fuzzySearchEnabled: true,
+        jumpToFirstHighlight: true,
+      },
+      matchesPerPage: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+      selectedMatch: {
+        pageIndex: 12,
+        matchIndex: 0,
+      },
+    });
+  });
+
   it("performs a multiple term (no phrase) search", async function () {
     // Page 9 contains 'alternate' and pages 6 and 9 contain 'solution'.
     // Both should be found for multiple term (no phrase) search.
