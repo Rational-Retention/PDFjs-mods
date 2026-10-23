@@ -176,8 +176,13 @@ class TextHighlighter {
     }
 
     function styleSpan(span, backgroundColor) {
-      span.style.background = backgroundColor ?? "rgba(0 166 255 / 0.25)"; // backgroundColor is converted to rgb or rgba automatically
-      if (span.className.includes("selected")) {
+      const isSelected = span.className.includes("selected");
+      const fallbackBackgroundColor = isSelected
+        ? "rgba(0 166 255 / 0.25)"
+        : "rgb(255 255 0 / 0.25)";
+
+      span.style.background = backgroundColor ?? fallbackBackgroundColor;
+      if (isSelected) {
         setAlpha(span, ".50)"); // Highlight selected term with original color but more opacity
       } else {
         setAlpha(span); // Override alpha value to ensure we have appropriate opacity on highlights
@@ -292,13 +297,7 @@ class TextHighlighter {
         );
         for (let n0 = begin.divIdx + 1, n1 = end.divIdx; n0 < n1; n0++) {
           textDivs[n0].className = "highlight middle" + highlightSuffix;
-          if (match.color || isSelected) {
-            const fallbackBackgroundColor = isSelected
-              ? "rgba(0 166 255 / 0.25)"
-              : "rgb(255 255 0 / 0.25)";
-
-            styleSpan(textDivs[n0], match.color ?? fallbackBackgroundColor);
-          }
+          styleSpan(textDivs[n0], match.color);
         }
         beginText(end, "highlight end" + highlightSuffix, match.color);
       }
