@@ -177,9 +177,9 @@ class TextHighlighter {
 
     function styleSpan(span, backgroundColor) {
       const isSelected = span.className.includes("selected");
-      const fallbackBackgroundColor = isSelected
+      const fallbackBackgroundColor = isSelected // color is converted to rgb or rgba automatically
         ? "rgba(0 166 255 / 0.25)"
-        : "rgb(255 255 0 / 0.25)";
+        : "rgba(255 255 0 / 0.25)";
 
       span.style.background = backgroundColor ?? fallbackBackgroundColor;
       if (isSelected) {
