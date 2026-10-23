@@ -293,7 +293,11 @@ class TextHighlighter {
         for (let n0 = begin.divIdx + 1, n1 = end.divIdx; n0 < n1; n0++) {
           textDivs[n0].className = "highlight middle" + highlightSuffix;
           if (match.color || isSelected) {
-            styleSpan(textDivs[n0], match.color);
+            const fallbackBackgroundColor = isSelected
+              ? "rgba(0 166 255 / 0.25)"
+              : "rgb(255 255 0 / 0.25)";
+
+            styleSpan(textDivs[n0], match.color ?? fallbackBackgroundColor);
           }
         }
         beginText(end, "highlight end" + highlightSuffix, match.color);
