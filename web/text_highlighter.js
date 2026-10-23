@@ -297,7 +297,11 @@ class TextHighlighter {
         );
         for (let n0 = begin.divIdx + 1, n1 = end.divIdx; n0 < n1; n0++) {
           textDivs[n0].className = "highlight middle" + highlightSuffix;
-          styleSpan(textDivs[n0], match.color);
+          if (match.color || isSelected) {
+            styleSpan(textDivs[n0], match.color);
+          } else {
+            styleSpan(textDivs[n0], null);
+          }
         }
         beginText(end, "highlight end" + highlightSuffix, match.color);
       }
