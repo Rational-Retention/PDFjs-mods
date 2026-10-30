@@ -203,16 +203,10 @@ class Page {
     // "The crop, bleed, trim, and art boxes should not ordinarily
     // extend beyond the boundaries of the media box. If they do, they are
     // effectively reduced to their intersection with the media box."
-    const { cropBox, mediaBox } = this;
 
-    if (cropBox !== mediaBox && !isArrayEqual(cropBox, mediaBox)) {
-      const box = Util.intersect(cropBox, mediaBox);
-      if (box && box[2] - box[0] > 0 && box[3] - box[1] > 0) {
-        return shadow(this, "view", box);
-      }
-      warn("Empty /CropBox and /MediaBox intersection.");
-    }
-    return shadow(this, "view", mediaBox);
+    // RC-26570 - we always want to display the full media box.
+    // Regardless if there is a cropBox or not
+    return shadow(this, "view", this.mediaBox);
   }
 
   get rotate() {
