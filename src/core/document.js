@@ -199,13 +199,6 @@ class Page {
   }
 
   get view() {
-    // From the spec, 6th ed., p.963:
-    // "The crop, bleed, trim, and art boxes should not ordinarily
-    // extend beyond the boundaries of the media box. If they do, they are
-    // effectively reduced to their intersection with the media box."
-
-    // RC-26570 - we always want to display the full media box.
-    // Regardless if there is a cropBox or not
     return shadow(this, "view", this.mediaBox);
   }
 
